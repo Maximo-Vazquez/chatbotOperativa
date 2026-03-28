@@ -1,8 +1,8 @@
 # Usa una imagen base de Python
 FROM python:3.11-slim
 
-ARG IMAGE_TAG=dev
-ENV IMAGE_TAG=${IMAGE_TAG}
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
 
 # Establece el directorio de trabajo en el contenedor
 WORKDIR /app
