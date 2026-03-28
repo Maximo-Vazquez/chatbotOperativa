@@ -6,15 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Series Temporales · Asistente</title>
 
+  <!-- Boxicons -->
+  <link href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
   <!-- marked.js para markdown real -->
   <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
   <!-- highlight.js para syntax highlighting -->
-  <link rel="stylesheet" id="hljs-dark-theme"  href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css">
-  <link rel="stylesheet" id="hljs-light-theme" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github.min.css" disabled>
-  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/core.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/languages/python.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/languages/r.min.js"></script>
-  <script>hljs.registerLanguage('python', window.hljsDefinePython); hljs.registerLanguage('r', window.hljsDefineR);</script>
+  <link rel="stylesheet" id="hljs-dark-theme"  href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <link rel="stylesheet" id="hljs-light-theme" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" disabled>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
   <style>
     /* ══ TOKENS ══ */
@@ -148,7 +147,8 @@
       transition: background .13s, color .13s; font-family: inherit;
     }
     .sb-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
-    .sb-btn svg { flex-shrink: 0; opacity: .7; }
+    .sb-btn svg, .sb-btn i { flex-shrink: 0; opacity: .7; }
+    .sb-btn:hover i, .sb-btn:hover svg { opacity: 1; }
 
     .sb-divider {
       height: 1px; background: var(--border);
@@ -162,7 +162,7 @@
     }
 
     .guide-btn {
-      display: flex; align-items: flex-start; gap: 8px;
+      display: flex; align-items: center; gap: 8px;
       padding: 7px 10px; border-radius: 8px; border: none;
       background: transparent; color: var(--text-secondary);
       font-size: 0.79rem; font-weight: 400;
@@ -171,7 +171,7 @@
       line-height: 1.4;
     }
     .guide-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
-    .guide-icon { font-size: .85rem; flex-shrink: 0; line-height: 1.6; }
+    .guide-icon { font-size: 1rem; flex-shrink: 0; line-height: 1; display: flex; align-items: center; width: 18px; color: var(--accent-purple); }
 
     /* tabs proveedores en el modal */
     .provider-tabs { display: flex; gap: 3px; background: var(--bg-input); border-radius: 8px; padding: 3px; }
@@ -291,8 +291,8 @@
       line-height: 1.45;
     }
     .qa-card:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border-strong); }
-    .qa-card-icon { font-size: 1.1rem; display: block; margin-bottom: 6px; }
-    .qa-card-text { font-weight: 500; }
+    .qa-card-icon { font-size: 1.3rem; display: flex; align-items: center; margin-bottom: 6px; color: var(--accent-purple); line-height: 1; }
+    .qa-card-text { font-weight: 500; display: block; }
 
     /* mensajes */
     .msg-wrap { max-width: 760px; margin: 0 auto; padding: 10px 20px; }
@@ -377,7 +377,12 @@
       display: block; padding: 14px 16px !important;
       font-size: .82em !important; line-height: 1.55;
       border-radius: 0 !important; overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar) transparent;
     }
+    .bubble-ai pre code::-webkit-scrollbar { height: 4px; }
+    .bubble-ai pre code::-webkit-scrollbar-track { background: transparent; }
+    .bubble-ai pre code::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
 
     /* typing dots */
     .typing-dots { display: inline-flex; gap: 4px; align-items: center; padding: 6px 0; }
@@ -466,6 +471,41 @@
     }
     .modal-close-btn:hover { background: var(--border-strong); }
 
+    /* ══ AI AVATAR SVG ══ */
+    .ai-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 2px;
+      background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+      box-shadow: 0 0 0 2px var(--accent-purple-bg);
+    }
+    .ai-avatar svg { display: block; }
+
+    /* ══ API KEY CARD (configurada) ══ */
+    .apikey-card {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--accent-green-bg); border: 1px solid rgba(25,195,125,.25);
+      border-radius: 10px; padding: 10px 12px; margin-bottom: 14px;
+    }
+    .apikey-card-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: rgba(25,195,125,.18); display: flex;
+      align-items: center; justify-content: center; flex-shrink: 0;
+      color: var(--accent-green); font-size: 1.1rem;
+    }
+    .apikey-card-info { flex: 1; min-width: 0; }
+    .apikey-card-label { font-size: .72rem; font-weight: 700; color: var(--accent-green); }
+    .apikey-card-hint  { font-size: .7rem; color: var(--text-secondary); margin-top: 1px; }
+    .apikey-edit-btn {
+      width: 28px; height: 28px; border-radius: 7px; border: none;
+      background: var(--bg-hover); color: var(--text-secondary);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0; transition: background .13s, color .13s;
+    }
+    .apikey-edit-btn:hover { background: var(--border-strong); color: var(--text-primary); }
+    .apikey-input-wrap { display: none; }
+    .apikey-input-wrap.visible { display: block; }
+
     /* ══ RESPONSIVE ══ */
     @media (max-width: 700px) {
       .sidebar { display: none; }
@@ -481,17 +521,17 @@
     <img src="{% static 'imagenes/logo.png' %}" alt="Logo" class="logo-img">
     <span class="app-name">Series Temporales</span>
     <button id="new-icon-btn" class="icon-btn" title="Nuevo chat">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      <i class='bx bx-edit-alt' style="font-size:1.1rem"></i>
     </button>
   </div>
 
   <button id="new-chat-btn" class="sb-btn">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <i class='bx bx-message-add' style="font-size:1rem"></i>
     Nuevo chat
   </button>
 
   <button id="open-model-modal" class="sb-btn">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+    <i class='bx bx-chip' style="font-size:1rem"></i>
     Configurar modelo
   </button>
 
@@ -499,28 +539,28 @@
   <div class="sb-section-label">Guías rápidas</div>
 
   <button class="guide-btn" onclick="sendGuide('¿Qué es una serie temporal? Explicame sus componentes principales: tendencia, estacionalidad, ciclo y ruido, con ejemplos reales.')">
-    <span class="guide-icon">📈</span><span>Componentes de una serie temporal</span>
+    <span class="guide-icon"><i class='bx bx-trending-up'></i></span><span>Componentes de una serie temporal</span>
   </button>
   <button class="guide-btn" onclick="sendGuide('¿Cómo determino si una serie temporal es estacionaria o no estacionaria? Explicame las pruebas ADF, KPSS y Phillips-Perron con código Python.')">
-    <span class="guide-icon">🔍</span><span>Estacionariedad: pruebas y diagnóstico</span>
+    <span class="guide-icon"><i class='bx bx-search-alt'></i></span><span>Estacionariedad: pruebas y diagnóstico</span>
   </button>
   <button class="guide-btn" onclick="sendGuide('Guiame paso a paso para interpretar la ACF y la PACF. ¿Qué patrones debo buscar para identificar AR, MA, ARMA o ARIMA?')">
-    <span class="guide-icon">📊</span><span>Interpretar ACF y PACF</span>
+    <span class="guide-icon"><i class='bx bx-bar-chart-alt-2'></i></span><span>Interpretar ACF y PACF</span>
   </button>
   <button class="guide-btn" onclick="sendGuide('¿Cuál es el flujo completo de análisis exploratorio de una serie temporal antes de elegir un modelo? Dame los pasos con descripción de cada uno.')">
-    <span class="guide-icon">🗺️</span><span>Flujo de análisis exploratorio</span>
+    <span class="guide-icon"><i class='bx bx-git-branch'></i></span><span>Flujo de análisis exploratorio</span>
   </button>
   <button class="guide-btn" onclick="sendGuide('¿Qué transformaciones puedo aplicar a una serie temporal no estacionaria? Explicame diferenciación, transformación logarítmica y Box-Cox con código Python.')">
-    <span class="guide-icon">⚙️</span><span>Transformaciones para estacionariedad</span>
+    <span class="guide-icon"><i class='bx bx-math'></i></span><span>Transformaciones para estacionariedad</span>
   </button>
   <button class="guide-btn" onclick="sendGuide('¿Cómo detecto y trato valores atípicos (outliers) en una serie temporal? ¿Qué estrategias hay para datos faltantes?')">
-    <span class="guide-icon">🛠️</span><span>Outliers y datos faltantes</span>
+    <span class="guide-icon"><i class='bx bx-wrench'></i></span><span>Outliers y datos faltantes</span>
   </button>
   <button class="guide-btn" onclick="sendGuide('Explicame qué es un proceso estocástico. Diferencia entre procesos AR, MA, ARMA, ARIMA y SARIMA con sus ecuaciones.')">
-    <span class="guide-icon">🎲</span><span>Procesos estocásticos y modelos</span>
+    <span class="guide-icon"><i class='bx bx-scatter-chart'></i></span><span>Procesos estocásticos y modelos</span>
   </button>
   <button class="guide-btn" onclick="sendGuide('¿Cómo valido un modelo de series temporales? Explicame las métricas MAE, RMSE, MAPE y el análisis de residuos.')">
-    <span class="guide-icon">✅</span><span>Validación y métricas de error</span>
+    <span class="guide-icon"><i class='bx bx-check-shield'></i></span><span>Validación y métricas de error</span>
   </button>
 
   <!-- Usuario -->
@@ -545,49 +585,43 @@
     <div class="model-tag" id="topbar-model-tag">{{ current_provider|upper }} · {{ current_model }}</div>
 
     <button id="theme-btn" class="topbar-btn" title="Cambiar tema">
-      <svg id="t-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
-        <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-      </svg>
-      <svg id="t-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-      </svg>
+      <i id="t-sun" class='bx bx-sun' style="font-size:1rem;display:none"></i>
+      <i id="t-moon" class='bx bx-moon' style="font-size:1rem"></i>
     </button>
 
     <button type="button" id="logout-trigger" class="topbar-btn logout-trigger" title="Cerrar sesión">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
-      </svg>
+      <i class='bx bx-log-out' style="font-size:1rem"></i>
     </button>
   </div>
 
   <div class="chat-window" id="chat-window">
     <div class="empty-state" id="empty-state">
-      <div class="empty-icon">📉</div>
+      <div class="empty-icon"><i class='bx bx-line-chart' style="font-size:1.6rem;color:var(--accent-purple)"></i></div>
       <div class="empty-title">Asistente de Pronóstico</div>
       <div class="empty-sub">Series temporales · Procesos estocásticos · Análisis exploratorio</div>
       <div class="quick-grid">
         <button class="qa-card" onclick="sendGuide('Soy nuevo en el tema. Dame una introducción a las series temporales y el pronóstico, con los conceptos clave que debo conocer.')">
-          <span class="qa-card-icon">🚀</span>
+          <span class="qa-card-icon"><i class='bx bx-rocket'></i></span>
           <span class="qa-card-text">Introducción al tema</span>
         </button>
         <button class="qa-card" onclick="sendGuide('¿Cómo hago el análisis exploratorio completo de una serie temporal paso a paso con Python?')">
-          <span class="qa-card-icon">🔬</span>
+          <span class="qa-card-icon"><i class='bx bx-analyse'></i></span>
           <span class="qa-card-text">Análisis exploratorio</span>
         </button>
         <button class="qa-card" onclick="sendGuide('¿Cómo pruebo si una serie temporal es estacionaria con Python? Mostrá código con la prueba ADF e interpretá los resultados.')">
-          <span class="qa-card-icon">📐</span>
+          <span class="qa-card-icon"><i class='bx bx-pulse'></i></span>
           <span class="qa-card-text">Probar estacionariedad</span>
         </button>
         <button class="qa-card" onclick="sendGuide('Mostrá un ejemplo completo de ACF y PACF con Python, graficálos e interpretá cada patrón posible.')">
-          <span class="qa-card-icon">📊</span>
+          <span class="qa-card-icon"><i class='bx bx-bar-chart-alt-2'></i></span>
           <span class="qa-card-text">Ejemplo ACF / PACF</span>
         </button>
         <button class="qa-card" onclick="sendGuide('¿Cómo elijo el modelo adecuado entre ARIMA, SARIMA, ETS o Prophet para mi serie temporal?')">
-          <span class="qa-card-icon">🤔</span>
+          <span class="qa-card-icon"><i class='bx bx-brain'></i></span>
           <span class="qa-card-text">¿Qué modelo elegir?</span>
         </button>
         <button class="qa-card" onclick="sendGuide('¿Qué es el ruido blanco? ¿Cómo lo detecto en los residuos de un modelo y qué hago si no lo hay?')">
-          <span class="qa-card-icon">🌊</span>
+          <span class="qa-card-icon"><i class='bx bx-wave'></i></span>
           <span class="qa-card-text">Ruido blanco y residuos</span>
         </button>
       </div>
@@ -598,7 +632,7 @@
     <div class="input-box">
       <textarea id="chat-input" class="chat-input" placeholder="Preguntá sobre series temporales, ACF/PACF, modelos ARIMA…" rows="1" autocomplete="off"></textarea>
       <button id="send-btn" class="send-btn" disabled>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        <i class='bx bx-up-arrow-alt' style="font-size:1.15rem"></i>
       </button>
     </div>
     <div class="input-hint">Enter para enviar · Shift+Enter para nueva línea</div>
@@ -611,7 +645,7 @@
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
       <div class="modal-title" style="margin:0">Configurar modelo</div>
       <button class="modal-close-btn" onclick="document.getElementById('model-modal').classList.remove('open')">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        <i class='bx bx-x' style="font-size:1.1rem"></i>
       </button>
     </div>
 
@@ -637,14 +671,27 @@
       </select>
     </div>
 
-    <div class="api-key-label">
-      <span>API Key</span>
-      <span class="api-key-status {% if has_api_key %}ok{% else %}missing{% endif %}" id="key-status">
-        {% if has_api_key %}● configurada{% else %}● falta{% endif %}
-      </span>
+    <!-- Card: clave ya configurada -->
+    <div id="apikey-card" class="apikey-card" {% if not has_api_key %}style="display:none"{% endif %}>
+      <div class="apikey-card-icon"><i class='bx bxs-key'></i></div>
+      <div class="apikey-card-info">
+        <div class="apikey-card-label">API Key configurada</div>
+        <div class="apikey-card-hint">La clave está guardada de forma segura.</div>
+      </div>
+      <button class="apikey-edit-btn" title="Editar clave" onclick="showApiKeyInput()">
+        <i class='bx bx-pencil'></i>
+      </button>
     </div>
-    <input type="password" class="api-key-field" id="api-key-field"
-           placeholder="Pegá tu API key (sk-… o ds-…)" autocomplete="off" style="margin-bottom:14px">
+
+    <!-- Input: sin clave o editando -->
+    <div id="apikey-input-wrap" class="apikey-input-wrap {% if not has_api_key %}visible{% endif %}">
+      <div class="api-key-label" style="margin-bottom:6px">
+        <span>API Key</span>
+        <span class="api-key-status missing" id="key-status-missing" {% if has_api_key %}style="display:none"{% endif %}>● falta</span>
+      </div>
+      <input type="password" class="api-key-field" id="api-key-field"
+             placeholder="Pegá tu API key (sk-… o ds-…)" autocomplete="off" style="margin-bottom:14px">
+    </div>
 
     <div class="config-feedback" id="config-feedback" style="margin-bottom:14px"></div>
 
@@ -659,9 +706,7 @@
 <div class="modal-overlay" id="logout-modal">
   <div class="modal">
     <div class="modal-icon">
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
-      </svg>
+      <i class='bx bx-log-out' style="font-size:1.25rem"></i>
     </div>
     <div class="modal-title">Cerrar sesión</div>
     <div class="modal-desc">¿Estás seguro de que querés cerrar sesión? El historial de chat se borrará.</div>
@@ -696,8 +741,8 @@
   function applyTheme(t) {
     html.setAttribute('data-theme', t);
     localStorage.setItem('chat-theme', t);
-    tSun.style.display  = t === 'dark' ? '' : 'none';
-    tMoon.style.display = t === 'dark' ? 'none' : '';
+    tSun.style.display  = t === 'dark' ? 'inline-block' : 'none';
+    tMoon.style.display = t === 'dark' ? 'none' : 'inline-block';
     hljsDark.disabled   = t !== 'dark';
     hljsLight.disabled  = t === 'dark';
   }
@@ -727,10 +772,31 @@
 
   const modelSelect    = document.getElementById('model-select');
   const apiKeyField    = document.getElementById('api-key-field');
-  const keyStatus      = document.getElementById('key-status');
   const configFeedback = document.getElementById('config-feedback');
   const topbarTag      = document.getElementById('topbar-model-tag');
   const sidebarSub     = document.getElementById('sidebar-model-sub');
+  const apikeyCard     = document.getElementById('apikey-card');
+  const apikeyInputWrap = document.getElementById('apikey-input-wrap');
+
+  let hasApiKey = HAS_API_KEY;
+
+  function showApiKeyInput() {
+    apikeyCard.style.display = 'none';
+    apikeyInputWrap.classList.add('visible');
+    apiKeyField.focus();
+  }
+
+  function updateApikeyUI(configured) {
+    hasApiKey = configured;
+    if (configured) {
+      apikeyCard.style.display = 'flex';
+      apikeyInputWrap.classList.remove('visible');
+      apiKeyField.value = '';
+    } else {
+      apikeyCard.style.display = 'none';
+      apikeyInputWrap.classList.add('visible');
+    }
+  }
 
   function selectProvider(p) {
     currentProvider = p;
@@ -742,6 +808,7 @@
     });
     const first = Array.from(modelSelect.options).find(o => o.dataset.provider === p);
     if (first) { first.selected = true; currentModel = first.value; }
+    // No resetear la clave al cambiar de proveedor
   }
   modelSelect.addEventListener('change', () => { currentModel = modelSelect.value; });
 
@@ -764,9 +831,7 @@
         currentModel = data.model;
         const label = `${data.provider.toUpperCase()} · ${data.model}`;
         topbarTag.textContent = label; sidebarSub.textContent = label;
-        keyStatus.textContent = data.has_api_key ? '● configurada' : '● falta';
-        keyStatus.className = 'api-key-status ' + (data.has_api_key ? 'ok' : 'missing');
-        apiKeyField.value = '';
+        updateApikeyUI(data.has_api_key);
         configFeedback.textContent = '✓ Guardado correctamente.';
         document.querySelectorAll('.msg-wrap').forEach(e => e.remove());
         showEmpty();
@@ -780,52 +845,62 @@
     }
   }
 
-  // ── MARKDOWN con marked + hljs ──
-  marked.setOptions({
-    breaks: true,
-    gfm: true,
-    highlight: null,  // lo hacemos manual en el renderer
-  });
+  // ── MARKDOWN con marked v9 + hljs ──
+  const _codeStore = {};
+  let _codeIdx = 0;
 
-  const renderer = new marked.Renderer();
+  marked.use({ breaks: true, gfm: true });
 
-  renderer.code = function(code, lang) {
-    const validLang = lang && hljs.getLanguage(lang) ? lang : '';
-    let highlighted = '';
-    try {
-      highlighted = validLang
-        ? hljs.highlight(code, { language: validLang }).value
-        : hljs.highlightAuto(code).value;
-    } catch { highlighted = code; }
-    const displayLang = lang || 'código';
-    const escapedCode = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    return `<div class="code-block-wrap">
-      <div class="code-block-header">
-        <span class="lang-label">${displayLang}</span>
-        <button class="copy-btn" onclick="copyCode(this, \`${escapedCode}\`)">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copiar
-        </button>
-      </div>
-      <pre><code class="hljs">${highlighted}</code></pre>
-    </div>`;
-  };
-
-  marked.use({ renderer });
-
-  function renderMD(text) {
-    try { return marked.parse(text); }
-    catch { return `<p>${text.replace(/</g,'&lt;')}</p>`; }
+  // Post-procesa el HTML generado por marked y convierte <pre><code> en bloques estilizados
+  function enhanceCodeBlocks(html) {
+    return html.replace(
+      /<pre><code(?:\s+class="([^"]*)")?>([\s\S]*?)<\/code><\/pre>/g,
+      function(_, cls, encodedContent) {
+        // Decodificar entidades que marked pone en el código
+        const decoded = encodedContent
+          .replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+        const lang = (cls || '').replace('language-', '').trim();
+        const validLang = lang && hljs.getLanguage(lang) ? lang : '';
+        let highlighted;
+        try {
+          highlighted = validLang
+            ? hljs.highlight(decoded, { language: validLang }).value
+            : hljs.highlightAuto(decoded, ['python','r','javascript','bash','sql','json','yaml','css']).value;
+        } catch {
+          highlighted = encodedContent; // ya viene escapado, usar tal cual
+        }
+        const cid = 'c' + (++_codeIdx);
+        _codeStore[cid] = decoded;
+        const displayLang = lang || 'código';
+        return `<div class="code-block-wrap"><div class="code-block-header"><span class="lang-label">${displayLang}</span><button class="copy-btn" onclick="copyCode(this,'${cid}')"><i class='bx bx-copy' style="font-size:.85rem"></i> Copiar</button></div><pre><code class="hljs">${highlighted}</code></pre></div>`;
+      }
+    );
   }
 
-  function copyCode(btn, code) {
-    const decoded = code.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>');
-    navigator.clipboard.writeText(decoded).then(() => {
+  function renderMD(text) {
+    try {
+      // Proteger fórmulas LaTeX para que marked no las rompa
+      const safe = text
+        .replace(/\$\$([\s\S]*?)\$\$/g,  (_, f) => '`' + f.trim() + '`')   // $$...$$
+        .replace(/\$([^\n$]+?)\$/g,       (_, f) => '`' + f.trim() + '`')   // $...$
+        .replace(/\\\[([\s\S]*?)\\\]/g,   (_, f) => '`' + f.trim() + '`')   // \[...\]
+        .replace(/\\\(([\s\S]*?)\\\)/g,   (_, f) => '`' + f.trim() + '`');  // \(...\)
+      return enhanceCodeBlocks(marked.parse(safe));
+    } catch(e) {
+      console.error('renderMD error:', e);
+      return '<pre style="white-space:pre-wrap">' + text.replace(/</g,'&lt;') + '</pre>';
+    }
+  }
+
+  function copyCode(btn, cid) {
+    const code = _codeStore[cid] || '';
+    navigator.clipboard.writeText(code).then(() => {
       btn.classList.add('copied');
-      btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copiado`;
+      btn.innerHTML = `<i class='bx bx-check' style="font-size:.85rem"></i> Copiado`;
       setTimeout(() => {
         btn.classList.remove('copied');
-        btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar`;
+        btn.innerHTML = `<i class='bx bx-copy' style="font-size:.85rem"></i> Copiar`;
       }, 2000);
     });
   }
@@ -853,12 +928,25 @@
     scrollEnd();
   }
 
+  const AI_AVATAR_SVG = `<svg width="16" height="16" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="16" cy="16" r="7" fill="white" fill-opacity="0.92"/>
+    <circle cx="16" cy="16" r="3.5" fill="#6366f1"/>
+    <path d="M16 4 L16 8" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <path d="M16 24 L16 28" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <path d="M4 16 L8 16" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <path d="M24 16 L28 16" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <path d="M7.51 7.51 L10.34 10.34" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M21.66 21.66 L24.49 24.49" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M24.49 7.51 L21.66 10.34" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M10.34 21.66 L7.51 24.49" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+  </svg>`;
+
   function addAI(htmlContent, typing = false) {
     const d = document.createElement('div');
     d.className = 'msg-wrap';
     d.innerHTML = `
       <div class="msg-ai">
-        <div class="ai-avatar">DS</div>
+        <div class="ai-avatar">${AI_AVATAR_SVG}</div>
         <div class="bubble-ai" data-ai>${typing
           ? '<div class="typing-dots"><span></span><span></span><span></span></div>'
           : htmlContent
