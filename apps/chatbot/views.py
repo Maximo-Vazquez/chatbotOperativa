@@ -44,7 +44,7 @@ def _get_chat_config(request):
     Devuelve (provider_key, model, api_key) según la sesión del usuario.
     La sesión puede sobreescribir el proveedor, modelo y clave API.
     """
-    provider_key = request.session.get("chat_provider", "openai")
+    provider_key = request.session.get("chat_provider", "deepseek")
     if provider_key not in PROVIDERS:
         provider_key = "openai"
 
