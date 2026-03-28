@@ -64,6 +64,11 @@ spec:
                 secretKeyRef:
                   name: db-credentials-chatbot
                   key: password
+            - name: DJANGO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot-operativa-app-secrets
+                  key: DJANGO_SECRET_KEY
             - name: GOOGLE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
@@ -123,6 +128,11 @@ spec:
                   key: password
             - name: APP_VERSION
               value: "latest"
+            - name: DJANGO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot-operativa-app-secrets
+                  key: DJANGO_SECRET_KEY
             - name: GOOGLE_CLIENT_ID
               valueFrom:
                 secretKeyRef:

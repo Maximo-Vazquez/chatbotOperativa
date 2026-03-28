@@ -1,5 +1,4 @@
 import json
-import os
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -75,7 +74,6 @@ def chat_home(request):
         "current_model": model,
         "providers": {k: {"label": v["label"], "models": v["models"]} for k, v in PROVIDERS.items()},
         "has_api_key": bool(api_key),
-        "app_version": os.environ.get("IMAGE_TAG", "dev"),
     })
 
 

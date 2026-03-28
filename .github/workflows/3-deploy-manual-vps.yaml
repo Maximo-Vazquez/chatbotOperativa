@@ -143,11 +143,13 @@ jobs:
 
             [[ -n "${{ secrets.GOOGLE_CLIENT_ID }}" ]] || { echo "Falta GOOGLE_CLIENT_ID en GitHub Secrets"; exit 1; }
             [[ -n "${{ secrets.GOOGLE_CLIENT_SECRET }}" ]] || { echo "Falta GOOGLE_CLIENT_SECRET en GitHub Secrets"; exit 1; }
+            [[ -n "${{ secrets.DJANGO_SECRET_KEY }}" ]] || { echo "Falta DJANGO_SECRET_KEY en GitHub Secrets"; exit 1; }
 
             echo "Sincronizando secret de aplicacion desde GitHub Secrets..."
             run_kubectl create secret generic chatbot-operativa-app-secrets \
               --from-literal=GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
               --from-literal=GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+              --from-literal=DJANGO_SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}" \
               --dry-run=client -o yaml | run_kubectl apply -f -
 
             echo "Aplicando manifiestos base..."
