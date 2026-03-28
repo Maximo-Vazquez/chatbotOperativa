@@ -573,6 +573,9 @@
     <span class="guide-icon"><i class='bx bx-check-shield'></i></span><span>Validación y métricas de error</span>
   </button>
 
+  <!-- Versión -->
+  <div style="padding:0 16px 8px;font-size:0.65rem;opacity:0.35;text-align:center;letter-spacing:0.04em">v{{ app_version }}</div>
+
   <!-- Usuario -->
   <div class="sidebar-user">
     <div class="user-chip">
@@ -836,6 +839,11 @@
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
         body: JSON.stringify({ provider: currentProvider, model: currentModel, api_key: apiKey }),
       });
+      if (!res.ok) {
+        const txt = await res.text();
+        configFeedback.textContent = `HTTP ${res.status}: ${txt.slice(0, 300)}`; configFeedback.className = 'config-feedback error';
+        return;
+      }
       const data = await res.json();
       if (data.ok) {
         currentModel = data.model;
@@ -850,8 +858,8 @@
         configFeedback.textContent = data.error || 'Error al guardar.';
         configFeedback.className = 'config-feedback error';
       }
-    } catch {
-      configFeedback.textContent = 'Error de conexión.'; configFeedback.className = 'config-feedback error';
+    } catch (err) {
+      configFeedback.textContent = 'Error de conexión: ' + err; configFeedback.className = 'config-feedback error';
     }
   }
 
@@ -1032,12 +1040,18 @@
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
         body: JSON.stringify({ message: text }),
       });
-      const data = await res.json();
-      aiEl.innerHTML = data.error
-        ? `<span style="color:#f87171">${esc(data.error)}</span>`
-        : renderMD(data.response || 'Sin respuesta.');
-    } catch {
-      aiEl.innerHTML = `<span style="color:#f87171">No se pudo conectar con el servidor.</span>`;
+      let data;
+      try { data = await res.json(); } catch { data = {}; }
+      if (!res.ok) {
+        const detail = data.error || data.detail || JSON.stringify(data) || '(sin detalle)';
+        aiEl.innerHTML = `<span style="color:#f87171"><strong>Error HTTP ${res.status}${res.statusText ? ' ' + res.statusText : ''}</strong><br>${esc(detail)}</span>`;
+      } else {
+        aiEl.innerHTML = data.error
+          ? `<span style="color:#f87171"><strong>Error del servidor:</strong><br>${esc(data.error)}</span>`
+          : renderMD(data.response || 'Sin respuesta.');
+      }
+    } catch (err) {
+      aiEl.innerHTML = `<span style="color:#f87171"><strong>No se pudo conectar con el servidor.</strong><br>${esc(String(err))}</span>`;
     } finally {
       scrollEnd();
       chatInput.focus();
