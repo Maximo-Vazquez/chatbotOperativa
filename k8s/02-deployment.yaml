@@ -62,6 +62,16 @@ spec:
                 secretKeyRef:
                   name: db-credentials-chatbot
                   key: password
+            - name: GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot-operativa-app-secrets
+                  key: GOOGLE_CLIENT_ID
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot-operativa-app-secrets
+                  key: GOOGLE_CLIENT_SECRET
       containers:
         - name: django-app
           image: ghcr.io/maximo-vazquez/chatbotoperativa:latest
@@ -109,6 +119,16 @@ spec:
                   key: password
             - name: APP_VERSION
               value: "latest"
+            - name: GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot-operativa-app-secrets
+                  key: GOOGLE_CLIENT_ID
+            - name: GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot-operativa-app-secrets
+                  key: GOOGLE_CLIENT_SECRET
           volumeMounts:
             - name: shared-static-vol
               mountPath: /app/staticfiles

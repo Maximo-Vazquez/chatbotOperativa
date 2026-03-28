@@ -31,6 +31,7 @@ jobs:
           key: ${{ secrets.NAS_SSH_KEY }}
           port: ${{ secrets.NAS_PORT }}
           script: |
+            set -euo pipefail
             echo "Iniciando despliegue manual en QNAP..."
 
             # Rutas tipicas donde QNAP instala kubectl
@@ -42,6 +43,15 @@ jobs:
             DEPLOY_DIR=/share/homes/${{ secrets.NAS_USER }}/deployments/chatbot-operativa
             mkdir -p "$DEPLOY_DIR"
             cd "$DEPLOY_DIR"
+
+            [[ -n "${{ secrets.GOOGLE_CLIENT_ID }}" ]] || { echo "Falta GOOGLE_CLIENT_ID en GitHub Secrets"; exit 1; }
+            [[ -n "${{ secrets.GOOGLE_CLIENT_SECRET }}" ]] || { echo "Falta GOOGLE_CLIENT_SECRET en GitHub Secrets"; exit 1; }
+
+            echo "Sincronizando secret de aplicacion desde GitHub Secrets..."
+            kubectl create secret generic chatbot-operativa-app-secrets \
+              --from-literal=GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
+              --from-literal=GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+              --dry-run=client -o yaml | kubectl apply -f -
 
             echo "Aplicando manifiestos (ConfigMap, Deployment y Service)..."
             kubectl apply -f "$DEPLOY_DIR"

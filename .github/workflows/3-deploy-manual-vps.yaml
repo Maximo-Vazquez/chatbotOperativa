@@ -141,6 +141,15 @@ jobs:
             mkdir -p "$DEPLOY_DIR"
             cd "$DEPLOY_DIR"
 
+            [[ -n "${{ secrets.GOOGLE_CLIENT_ID }}" ]] || { echo "Falta GOOGLE_CLIENT_ID en GitHub Secrets"; exit 1; }
+            [[ -n "${{ secrets.GOOGLE_CLIENT_SECRET }}" ]] || { echo "Falta GOOGLE_CLIENT_SECRET en GitHub Secrets"; exit 1; }
+
+            echo "Sincronizando secret de aplicacion desde GitHub Secrets..."
+            run_kubectl create secret generic chatbot-operativa-app-secrets \
+              --from-literal=GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
+              --from-literal=GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+              --dry-run=client -o yaml | run_kubectl apply -f -
+
             echo "Aplicando manifiestos base..."
             run_kubectl apply -f "$DEPLOY_DIR/01-configmap-nginx.yaml"
             run_kubectl apply -f "$DEPLOY_DIR/02-deployment.yaml"
