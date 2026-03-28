@@ -1,1 +1,7 @@
-﻿Chatbot: se implementará un chatbot independiente orientado a los fundamentos del pronóstico con procesos estocásticos y series temporales. Asistirá en la comprensión de definiciones y conceptos (serie temporal, ruido, tendencia, estacionalidad), en la clasificación del comportamiento (estacionario/no estacionario) y en el análisis exploratorio. Incluirá un flujo guiado para interpretar la función de autocorrelación (ACF) y otras herramientas básicas, detectar patrones y reparar los datos/hipótesis de modelado antes de elegir un modelo específico.
+﻿Chatbot: se implementará un chatbot independiente orientado a los fundamentos del pronóstico con procesos estocásticos 
+y series temporales. Asistirá en la comprensión de definiciones y conceptos 
+(serie temporal, ruido, tendencia, estacionalidad),
+en la clasificación del comportamiento (estacionario/no estacionario) y en el análisis exploratorio.
+Incluirá un flujo guiado para interpretar la función de autocorrelación (ACF) y
+otras herramientas básicas,
+detectar patrones y reparar los datos/hipótesis de modelado antes de elegir un modelo específico.
