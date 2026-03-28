@@ -411,14 +411,16 @@
       border: 1px solid var(--border);
     }
     .input-box:focus-within { border-color: var(--border-strong); }
+    .input-inner { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
     .chat-input {
-      flex: 1; background: transparent; border: none; outline: none; resize: none;
+      width: 100%; background: transparent; border: none; outline: none; resize: none;
       color: var(--text-primary); font-family: inherit; font-size: .9rem;
       line-height: 1.55; min-height: 22px; max-height: 180px; overflow-y: auto;
     }
     .chat-input::placeholder { color: var(--text-muted); }
     .chat-input::-webkit-scrollbar { width: 3px; }
     .chat-input::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 2px; }
+    .input-bottom-row { display: flex; align-items: center; }
     .send-btn {
       width: 32px; height: 32px; border-radius: 8px; border: none;
       background: var(--send-off); color: var(--text-muted);
@@ -516,10 +518,70 @@
     .apikey-input-wrap { display: none; }
     .apikey-input-wrap.visible { display: block; }
 
-    /* ══ RESPONSIVE ══ */
+    /* ══ REASONING TOGGLE ══ */
+    .reasoning-toggle {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 20px; padding: 3px 9px 3px 5px;
+      cursor: pointer; user-select: none;
+      transition: border-color .15s, background .15s;
+    }
+    .reasoning-toggle:hover { border-color: var(--border-strong); background: var(--bg-hover); }
+    .reasoning-toggle.active { border-color: var(--accent-purple); background: var(--accent-purple-bg); }
+    .toggle-switch {
+      width: 26px; height: 15px; border-radius: 8px;
+      background: var(--border-strong); position: relative;
+      transition: background .2s; flex-shrink: 0;
+    }
+    .reasoning-toggle.active .toggle-switch { background: var(--accent-purple); }
+    .toggle-knob {
+      position: absolute; top: 1.5px; left: 1.5px;
+      width: 12px; height: 12px; border-radius: 50%;
+      background: #fff; transition: transform .2s;
+      box-shadow: 0 1px 2px rgba(0,0,0,.2);
+    }
+    .reasoning-toggle.active .toggle-knob { transform: translateX(11px); }
+    .toggle-label {
+      font-size: .71rem; font-weight: 600;
+      color: var(--text-secondary); white-space: nowrap;
+    }
+    .reasoning-toggle.active .toggle-label { color: var(--accent-purple); }
+
+    /* ══ SIDEBAR OVERLAY (mobile) ══ */
+    .sidebar-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);
+    }
+    .sidebar-overlay.open { display: block; }
+
     @media (max-width: 700px) {
-      .sidebar { display: none; }
-      .quick-grid { grid-template-columns: 1fr; }
+      /* Sidebar: oculto por defecto como overlay desde la izquierda */
+      .sidebar {
+        position: fixed; inset: 0 auto 0 0; z-index: 201;
+        width: 280px; box-shadow: 4px 0 24px rgba(0,0,0,.3);
+        transform: translateX(-100%);
+        transition: transform .22s ease, visibility .22s;
+        visibility: hidden;
+        display: flex; /* mantener flex para que la transición funcione */
+      }
+      .sidebar.mobile-open {
+        transform: translateX(0);
+        visibility: visible;
+      }
+      .hamburger-btn { display: flex !important; }
+
+      /* Cards: 2 columnas compactas, texto y padding más chicos */
+      .empty-state { padding: 16px 12px; gap: 6px; }
+      .empty-title  { font-size: 1.1rem; }
+      .empty-sub    { font-size: .76rem; }
+      .quick-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        margin-top: 12px;
+      }
+      .qa-card { padding: 9px 10px; border-radius: 10px; font-size: .74rem; }
+      .qa-card-icon { font-size: 1.1rem; margin-bottom: 4px; }
     }
   </style>
 </head>
@@ -595,6 +657,9 @@
 <!-- ══ MAIN ══ -->
 <main class="main">
   <div class="topbar">
+    <button id="hamburger-btn" class="topbar-btn hamburger-btn" title="Menú" style="display:none">
+      <i class='bx bx-menu' style="font-size:1.1rem"></i>
+    </button>
     <div class="model-tag" id="topbar-model-tag">{{ current_provider|upper }} · {{ current_model }}</div>
 
     <button id="theme-btn" class="topbar-btn" title="Cambiar tema">
@@ -643,7 +708,15 @@
 
   <div class="input-area">
     <div class="input-box">
-      <textarea id="chat-input" class="chat-input" placeholder="Preguntá sobre series temporales, ACF/PACF, modelos ARIMA…" rows="1" autocomplete="off"></textarea>
+      <div class="input-inner">
+        <textarea id="chat-input" class="chat-input" placeholder="Preguntá sobre series temporales, ACF/PACF, modelos ARIMA…" rows="1" autocomplete="off"></textarea>
+        <div class="input-bottom-row">
+          <button id="reasoning-toggle" class="reasoning-toggle{% if current_model == 'deepseek-reasoner' %} active{% endif %}" title="Activar modo razonamiento">
+            <div class="toggle-switch"><div class="toggle-knob"></div></div>
+            <span class="toggle-label">Razonamiento</span>
+          </button>
+        </div>
+      </div>
       <button id="send-btn" class="send-btn" disabled>
         <i class='bx bx-up-arrow-alt' style="font-size:1.15rem"></i>
       </button>
@@ -733,6 +806,9 @@
   </div>
 </div>
 
+<!-- ══ SIDEBAR OVERLAY (mobile) ══ -->
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
 {{ chat_history|json_script:"chat-history" }}
 
 <script>
@@ -776,7 +852,22 @@
   openModelBtn.addEventListener('click',  () => modelModal.classList.add('open'));
   modelModal.addEventListener('click',    e => { if (e.target === modelModal) modelModal.classList.remove('open'); });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { logoutModal.classList.remove('open'); modelModal.classList.remove('open'); }
+    if (e.key === 'Escape') { logoutModal.classList.remove('open'); modelModal.classList.remove('open'); closeMobileSidebar(); }
+  });
+
+  // ── HAMBURGER / SIDEBAR MOBILE ──
+  const hamburgerBtn    = document.getElementById('hamburger-btn');
+  const sidebarEl       = document.querySelector('.sidebar');
+  const sidebarOverlay  = document.getElementById('sidebar-overlay');
+
+  function openMobileSidebar()  { sidebarEl.classList.add('mobile-open'); sidebarOverlay.classList.add('open'); }
+  function closeMobileSidebar() { sidebarEl.classList.remove('mobile-open'); sidebarOverlay.classList.remove('open'); }
+
+  hamburgerBtn.addEventListener('click', openMobileSidebar);
+  sidebarOverlay.addEventListener('click', closeMobileSidebar);
+  // Cerrar sidebar al hacer click en un botón dentro (guías, nuevo chat, configurar)
+  sidebarEl.addEventListener('click', e => {
+    if (e.target.closest('.guide-btn, .sb-btn')) closeMobileSidebar();
   });
 
   // ── PROVEEDOR/MODELO ──
@@ -788,8 +879,13 @@
   const configFeedback = document.getElementById('config-feedback');
   const topbarTag      = document.getElementById('topbar-model-tag');
   const sidebarSub     = document.getElementById('sidebar-model-sub');
-  const apikeyCard     = document.getElementById('apikey-card');
+  const apikeyCard      = document.getElementById('apikey-card');
   const apikeyInputWrap = document.getElementById('apikey-input-wrap');
+  const reasoningToggle = document.getElementById('reasoning-toggle');
+
+  const REASONING_MODEL    = 'deepseek-reasoner';
+  const REASONING_PROVIDER = 'deepseek';
+  const STANDARD_MODELS   = { openai: 'gpt-4o-mini', deepseek: 'deepseek-chat' };
 
   let hasApiKey = HAS_API_KEY;
 
@@ -847,9 +943,12 @@
       const data = await res.json();
       if (data.ok) {
         currentModel = data.model;
+        currentProvider = data.provider;
         const label = `${data.provider.toUpperCase()} · ${data.model}`;
         topbarTag.textContent = label; sidebarSub.textContent = label;
         updateApikeyUI(data.has_api_key);
+        // Sincronizar toggle de razonamiento
+        reasoningToggle.classList.toggle('active', data.model === REASONING_MODEL);
         configFeedback.textContent = '✓ Guardado correctamente.';
         document.querySelectorAll('.msg-wrap').forEach(e => e.remove());
         showEmpty();
@@ -862,6 +961,57 @@
       configFeedback.textContent = 'Error de conexión: ' + err; configFeedback.className = 'config-feedback error';
     }
   }
+
+  // ── REASONING TOGGLE ──
+  function isReasoningActive() {
+    return reasoningToggle.classList.contains('active');
+  }
+
+  reasoningToggle.addEventListener('click', async () => {
+    const wasActive = isReasoningActive();
+    const newActive = !wasActive;
+
+    // Determinar proveedor y modelo destino
+    let targetProvider, targetModel;
+    if (newActive) {
+      targetProvider = REASONING_PROVIDER;
+      targetModel    = REASONING_MODEL;
+    } else {
+      // Volver al modelo estándar del proveedor actual
+      targetProvider = currentProvider;
+      targetModel    = STANDARD_MODELS[currentProvider] || STANDARD_MODELS.deepseek;
+    }
+
+    try {
+      const res = await fetch("{% url 'chat_config' %}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+        body: JSON.stringify({ provider: targetProvider, model: targetModel, api_key: '' }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        currentProvider = data.provider;
+        currentModel    = data.model;
+        const label = `${data.provider.toUpperCase()} · ${data.model}`;
+        topbarTag.textContent  = label;
+        sidebarSub.textContent = label;
+        // Sincronizar tabs del modal
+        document.querySelectorAll('.provider-tab').forEach(b =>
+          b.classList.toggle('active', b.dataset.provider === currentProvider));
+        // Sincronizar select del modal
+        Array.from(modelSelect.options).forEach(o => {
+          const match = o.dataset.provider === currentProvider;
+          o.disabled = !match; o.style.display = match ? '' : 'none';
+          if (match && o.value === currentModel) o.selected = true;
+        });
+        reasoningToggle.classList.toggle('active', newActive);
+        document.querySelectorAll('.msg-wrap').forEach(e => e.remove());
+        showEmpty();
+      }
+    } catch (err) {
+      console.error('Error al cambiar modo razonamiento:', err);
+    }
+  });
 
   // ── MARKDOWN con marked v9 + hljs ──
   const _codeStore = {};

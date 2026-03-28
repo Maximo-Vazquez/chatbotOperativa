@@ -8,6 +8,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from openai import OpenAI
 
+from .models import UserAPIKey
+
 MAX_HISTORY_ITEMS = 12
 
 PROVIDERS = {
@@ -40,14 +42,22 @@ def _clean_history(raw_history):
     return cleaned[-MAX_HISTORY_ITEMS:]
 
 
+def _get_user_api_key(user, provider_key):
+    """Devuelve la API key guardada en DB para el usuario y proveedor."""
+    try:
+        return UserAPIKey.objects.get(user=user, provider=provider_key).api_key.strip()
+    except UserAPIKey.DoesNotExist:
+        return ""
+
+
 def _get_chat_config(request):
     """
-    Devuelve (provider_key, model, api_key) según la sesión del usuario.
-    La sesión puede sobreescribir el proveedor, modelo y clave API.
+    Devuelve (provider_key, provider, model, api_key) según sesión + DB del usuario.
+    La clave se busca primero en DB (por usuario), luego en settings de entorno.
     """
     provider_key = request.session.get("chat_provider", "deepseek")
     if provider_key not in PROVIDERS:
-        provider_key = "openai"
+        provider_key = "deepseek"
 
     provider = PROVIDERS[provider_key]
     default_model = provider["models"][0]
@@ -55,8 +65,8 @@ def _get_chat_config(request):
     if model not in provider["models"]:
         model = default_model
 
-    # Clave: primero la guardada en sesión, luego la de settings
-    api_key = request.session.get(f"api_key_{provider_key}", "").strip()
+    # Clave: primero DB (por usuario), luego settings de entorno
+    api_key = _get_user_api_key(request.user, provider_key)
     if not api_key:
         api_key = getattr(settings, provider["key_setting"], "").strip()
 
@@ -146,7 +156,7 @@ def reset_chat(request):
 @login_required
 @require_POST
 def save_config(request):
-    """Guarda proveedor, modelo y API key en la sesión del usuario."""
+    """Guarda proveedor, modelo y API key. La clave se persiste en DB por usuario."""
     try:
         payload = json.loads(request.body.decode("utf-8") or "{}")
     except json.JSONDecodeError:
@@ -166,18 +176,25 @@ def save_config(request):
     request.session["chat_provider"] = provider_key
     request.session["chat_model"] = model or provider["models"][0]
 
+    # Persistir API key en DB por usuario (upsert)
     if api_key:
-        request.session[f"api_key_{provider_key}"] = api_key
+        UserAPIKey.objects.update_or_create(
+            user=request.user,
+            provider=provider_key,
+            defaults={"api_key": api_key},
+        )
 
     # Limpiar historial al cambiar proveedor/modelo
     request.session["chat_history"] = []
+
+    has_key = bool(
+        _get_user_api_key(request.user, provider_key) or
+        getattr(settings, provider["key_setting"], "")
+    )
 
     return JsonResponse({
         "ok": True,
         "provider": provider_key,
         "model": request.session["chat_model"],
-        "has_api_key": bool(
-            request.session.get(f"api_key_{provider_key}") or
-            getattr(settings, provider["key_setting"], "")
-        ),
+        "has_api_key": has_key,
     })
