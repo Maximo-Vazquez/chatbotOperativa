@@ -1,0 +1,678 @@
+{% load static %}
+{% load socialaccount %}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ingresar</title>
+  <style>
+    :root[data-theme="light"] {
+      --bg-page: #f3f4f6;
+      --bg-panel: #ffffff;
+      --bg-input: #ffffff;
+      --bg-tab: #f3f4f6;
+      --bg-tab-active: #ffffff;
+      --bg-verify: #fafafa;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --text-label: #374151;
+      --border: #e5e7eb;
+      --input-border: #d1d5db;
+      --primary: #064e3b;
+      --primary-hover: #065f46;
+      --flash-success-bg: #ecfdf5; --flash-success-border: #a7f3d0; --flash-success-color: #065f46;
+      --flash-error-bg: #fef2f2;   --flash-error-border: #fecaca;   --flash-error-color: #991b1b;
+      --flash-warning-bg: #fffbeb; --flash-warning-border: #fcd34d; --flash-warning-color: #92400e;
+      --flash-info-bg: #eff6ff;    --flash-info-border: #bfdbfe;    --flash-info-color: #1e3a8a;
+      --google-bg: #ffffff; --google-border: #e5e7eb; --google-color: #1f2937;
+      --btn-secondary-bg: #ffffff; --btn-secondary-border: #d1d5db; --btn-secondary-color: #111827;
+      --theme-btn-bg: rgba(255,255,255,0.85); --theme-btn-border: rgba(0,0,0,0.12);
+    }
+
+    :root[data-theme="dark"] {
+      --bg-page: #1a1a1a;
+      --bg-panel: #242424;
+      --bg-input: #2e2e2e;
+      --bg-tab: #1e1e1e;
+      --bg-tab-active: #2e2e2e;
+      --bg-verify: #2a2a2a;
+      --text-main: #f0f0f0;
+      --text-muted: #9ca3af;
+      --text-label: #d1d5db;
+      --border: #333333;
+      --input-border: #3d3d3d;
+      --primary: #10b981;
+      --primary-hover: #059669;
+      --flash-success-bg: #0d2a1e; --flash-success-border: #1a4731; --flash-success-color: #4ade80;
+      --flash-error-bg: #2a0d0d;   --flash-error-border: #471a1a;   --flash-error-color: #f87171;
+      --flash-warning-bg: #2a1e0d; --flash-warning-border: #473d1a; --flash-warning-color: #fbbf24;
+      --flash-info-bg: #0d1a2a;    --flash-info-border: #1a3147;    --flash-info-color: #60a5fa;
+      --google-bg: #2e2e2e; --google-border: #3d3d3d; --google-color: #f0f0f0;
+      --btn-secondary-bg: #2e2e2e; --btn-secondary-border: #3d3d3d; --btn-secondary-color: #f0f0f0;
+      --theme-btn-bg: rgba(40,40,40,0.9); --theme-btn-border: rgba(255,255,255,0.1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden;
+      transition: color 0.25s;
+      color: var(--text-main);
+    }
+
+    /* ── PANEL VISUAL LATERAL (desktop) ── */
+    .visual-side {
+      display: none;
+      width: 50%;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .visual-side video {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      filter: brightness(0.72);
+    }
+
+    .visual-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(10,16,32,0.08), rgba(10,16,32,0.55) 60%, rgba(10,16,32,0.75));
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 56px;
+      color: white;
+    }
+
+    .logo-badge {
+      position: absolute;
+      top: 24px; left: 24px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.14);
+    }
+
+    .logo-badge img { width: 30px; height: 30px; object-fit: contain; }
+    .logo-badge span { font-weight: 700; color: #111827; font-size: 0.88rem; }
+
+    .visual-quote {
+      font-size: 1.3rem;
+      font-weight: 700;
+      line-height: 1.48;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.28);
+    }
+
+    .visual-author { font-size: 0.85rem; opacity: 0.82; }
+
+    @media (min-width: 900px) {
+      .visual-side { display: block; }
+      .form-side { width: 50%; }
+    }
+
+    /* ── LADO FORMULARIO ── */
+    .form-side {
+      width: 100%;
+      min-height: 100vh;
+      background: var(--bg-page);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      position: relative;
+      transition: background 0.25s;
+    }
+
+    /* ── TOGGLE TEMA (esquina superior derecha) ── */
+    .theme-btn {
+      position: absolute;
+      top: 16px; right: 16px;
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--theme-btn-border);
+      background: var(--theme-btn-bg);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+      transition: color 0.2s, background 0.25s, border-color 0.25s;
+    }
+
+    .theme-btn:hover { color: var(--text-main); }
+
+    .form-inner {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    /* ── HEADER ── */
+    .header-text {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .header-text h1 {
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 6px;
+      letter-spacing: -0.03em;
+    }
+
+    .header-text p { color: var(--text-muted); font-size: 0.9rem; }
+
+    /* ── FLASH ── */
+    .flash-messages { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
+
+    .flash-message {
+      border-radius: 10px;
+      border: 1px solid;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .flash-message.success { background: var(--flash-success-bg); border-color: var(--flash-success-border); color: var(--flash-success-color); }
+    .flash-message.error   { background: var(--flash-error-bg);   border-color: var(--flash-error-border);   color: var(--flash-error-color); }
+    .flash-message.warning { background: var(--flash-warning-bg); border-color: var(--flash-warning-border); color: var(--flash-warning-color); }
+    .flash-message.info    { background: var(--flash-info-bg);    border-color: var(--flash-info-border);    color: var(--flash-info-color); }
+
+    /* ── TABS ── */
+    .tab-nav {
+      display: flex;
+      background: var(--bg-tab);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+      transition: background 0.25s, border-color 0.25s;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.2s, color 0.2s;
+      font-family: inherit;
+    }
+
+    .tab-btn.active {
+      background: var(--bg-tab-active);
+      color: var(--text-main);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border: 1px solid var(--border);
+    }
+
+    .tab-btn:hover:not(.active) { color: var(--text-main); }
+
+    /* ── FORM CONTENT ── */
+    .forms-wrapper { position: relative; min-height: 360px; }
+
+    .form-content {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateX(14px);
+      transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+      pointer-events: none;
+    }
+
+    .form-content.active-form {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(0);
+      position: relative;
+      pointer-events: all;
+    }
+
+    /* ── FIELDS ── */
+    .field { margin-bottom: 16px; }
+
+    .field label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-label);
+      margin-bottom: 6px;
+      transition: color 0.25s;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--input-border);
+      background: var(--bg-input);
+      color: var(--text-main);
+      font-size: 0.9rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.25s;
+    }
+
+    .field input::placeholder { color: var(--text-muted); }
+
+    .field input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(6, 78, 59, 0.12);
+    }
+
+    :root[data-theme="dark"] .field input:focus {
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+    }
+
+    /* ── FORGOT ── */
+    .forgot-row { display: flex; justify-content: flex-end; margin: -8px 0 18px; }
+
+    .forgot-link {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+
+    .forgot-link:hover { color: var(--primary); }
+
+    /* ── BUTTONS ── */
+    .primary-btn {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+
+    .primary-btn:hover:not(:disabled) {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 14px rgba(6, 78, 59, 0.3);
+    }
+
+    :root[data-theme="dark"] .primary-btn:hover:not(:disabled) {
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    }
+
+    .primary-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .secondary-btn {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--btn-secondary-border);
+      background: var(--btn-secondary-bg);
+      color: var(--btn-secondary-color);
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      display: block;
+      transition: opacity 0.15s;
+      font-family: inherit;
+    }
+
+    .secondary-btn:hover:not([disabled]) { opacity: 0.72; }
+    .secondary-btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── DIVIDER ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 22px 0;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── GOOGLE ── */
+    .google-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px;
+      background: var(--google-bg);
+      border: 1px solid var(--google-border);
+      border-radius: 12px;
+      color: var(--google-color);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: opacity 0.15s, box-shadow 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .google-button:hover {
+      opacity: 0.82;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+
+    .google-logo { width: 20px; height: 20px; flex-shrink: 0; }
+
+    /* ── VERIFY CARD ── */
+    .verify-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      background: var(--bg-verify);
+      margin-bottom: 16px;
+      transition: background 0.25s, border-color 0.25s;
+    }
+
+    .verify-card p {
+      margin: 0 0 10px;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+
+    .verify-meta {
+      margin-bottom: 12px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .verify-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+
+  <!-- Panel visual lateral — solo desktop, sin video duplicado en el fondo -->
+  <div class="visual-side">
+    <video autoplay muted loop playsinline>
+      <source src="{% static 'videos/tienda.mp4' %}" type="video/mp4">
+    </video>
+    <div class="logo-badge">
+      <img src="{% static 'imagenes/logo.png' %}" alt="Logo">
+      <span>Software</span>
+    </div>
+    <div class="visual-overlay">
+      <div class="visual-quote">"La tecnología diseñada para llevar tu empresa al siguiente nivel, sin complicaciones técnicas."</div>
+      <div class="visual-author">MF INDU — Plataforma de Gestión</div>
+    </div>
+  </div>
+
+  <!-- Formulario -->
+  <div class="form-side">
+
+    <!-- Botón tema -->
+    <button id="theme-btn" class="theme-btn" title="Cambiar tema">
+      <svg id="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+        <circle cx="12" cy="12" r="5"/>
+        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+      </svg>
+      <svg id="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+
+    <div class="form-inner">
+      <div class="header-text">
+        <h1>Bienvenido</h1>
+        <p>Ingresá tus datos para continuar</p>
+      </div>
+
+      {% if messages %}
+      <div class="flash-messages">
+        {% for message in messages %}
+        <div class="flash-message {{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="tab-nav">
+        <button type="button" class="tab-btn {% if active_tab != 'register' %}active{% endif %}" onclick="switchTab('login')">Iniciar Sesión</button>
+        <button type="button" class="tab-btn {% if active_tab == 'register' %}active{% endif %}" onclick="switchTab('register')">Registrarse</button>
+      </div>
+
+      <div class="forms-wrapper">
+
+        <!-- LOGIN -->
+        <div id="form-login" class="form-content {% if active_tab != 'register' %}active-form{% endif %}">
+          <form action="{% url 'login' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next_url|default:'' }}">
+            <div class="field">
+              <label for="login-email">Correo Electrónico</label>
+              <input id="login-email" type="email" name="gmail" autocomplete="email" required placeholder="nombre@ejemplo.com">
+            </div>
+            <div class="field">
+              <label for="login-pass">Contraseña</label>
+              <input id="login-pass" type="password" name="contrasena" autocomplete="current-password" required placeholder="••••••••">
+            </div>
+            <div class="forgot-row">
+              <a href="#" class="forgot-link">¿Olvidaste tu contraseña?</a>
+            </div>
+            <button type="submit" class="primary-btn">Ingresar</button>
+          </form>
+
+          <div class="divider">o continúa con</div>
+
+          <a href="{% provider_login_url 'google' next=next_url %}" class="google-button">
+            <svg class="google-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continuar con Google
+          </a>
+        </div>
+
+        <!-- REGISTER -->
+        <div id="form-register" class="form-content {% if active_tab == 'register' %}active-form{% endif %}">
+
+          {% if not show_code_form %}
+          <form action="{% url 'registro_local' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="send_code">
+            <input type="hidden" name="next" value="{{ next_url|default:'' }}">
+            <div class="field">
+              <label for="reg-email">Correo Electrónico</label>
+              <input id="reg-email" type="email" name="gmail" autocomplete="email" required placeholder="nombre@ejemplo.com">
+            </div>
+            <div class="field">
+              <label for="reg-user">Nombre de Usuario</label>
+              <input id="reg-user" type="text" name="usuario" autocomplete="username" required placeholder="Tu usuario">
+            </div>
+            <div class="field">
+              <label for="reg-pass">Contraseña</label>
+              <input id="reg-pass" type="password" name="contrasena" autocomplete="new-password" required placeholder="Crea una contraseña">
+            </div>
+            <div class="field">
+              <label for="reg-pass2">Confirmar Contraseña</label>
+              <input id="reg-pass2" type="password" name="conf_contrasena" autocomplete="new-password" required placeholder="Repite la contraseña">
+            </div>
+            <button type="submit" class="primary-btn">Enviar código</button>
+          </form>
+          {% endif %}
+
+          {% if show_code_form %}
+          <div class="verify-card">
+            <p>Revisá <strong>{{ pending_email }}</strong> y pegá el código de 6 dígitos.</p>
+            <div class="verify-meta">
+              Vence en <span id="code-expiration-timer" data-seconds="{{ code_expires_in_seconds|default:'0' }}">{{ code_expires_in_seconds|default:'0' }}s</span>
+            </div>
+            <form id="verify-code-form" action="{% url 'registro_local' %}" method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="verify_code">
+              <input type="hidden" name="next" value="{{ next_url|default:'' }}">
+              <div class="field" style="margin-bottom:10px">
+                <label for="codigo_verificacion">Código de verificación</label>
+                <input id="codigo_verificacion" type="text" name="codigo_verificacion" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required placeholder="000000">
+              </div>
+              <button id="verify-code-submit-btn" type="submit" class="primary-btn">Verificar y crear cuenta</button>
+            </form>
+            <div class="verify-actions">
+              <form id="resend-code-form" action="{% url 'registro_local' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="resend_code">
+                <input type="hidden" name="next" value="{{ next_url|default:'' }}">
+                <button id="resend-code-btn" type="submit" class="secondary-btn"
+                  data-cooldown="{{ resend_available_in_seconds|default:'0' }}"
+                  {% if resend_available_in_seconds %}disabled{% endif %}>
+                  {% if resend_available_in_seconds %}Reenviar código ({{ resend_available_in_seconds }}s){% else %}Reenviar código{% endif %}
+                </button>
+              </form>
+              <a class="secondary-btn" href="{% url 'registro_local' %}?reset_registration=1{% if next_url %}&next={{ next_url|urlencode }}{% endif %}">
+                Editar datos de registro
+              </a>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="divider">o regístrate con</div>
+
+          <a href="{% provider_login_url 'google' next=next_url %}" class="google-button">
+            <svg class="google-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continuar con Google
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── THEME ──
+    const html = document.documentElement;
+    const themeBtn = document.getElementById('theme-btn');
+    const iconSun = document.getElementById('icon-sun');
+    const iconMoon = document.getElementById('icon-moon');
+
+    function applyTheme(theme) {
+      html.setAttribute('data-theme', theme);
+      localStorage.setItem('chatgpt-theme', theme);
+      if (theme === 'dark') {
+        iconSun.style.display = '';
+        iconMoon.style.display = 'none';
+      } else {
+        iconSun.style.display = 'none';
+        iconMoon.style.display = '';
+      }
+    }
+
+    applyTheme(localStorage.getItem('chatgpt-theme') || 'light');
+
+    themeBtn.addEventListener('click', () => {
+      applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+
+    // ── TABS ──
+    const showCodeForm = {{ show_code_form|default:False|yesno:"true,false" }};
+    const resetRegisterUrl = "{% url 'registro_local' %}?reset_registration=1{% if next_url %}&next={{ next_url|urlencode }}{% endif %}";
+
+    function switchTab(tab, skipReset = false) {
+      if (tab === 'register' && showCodeForm && !skipReset) {
+        window.location.href = resetRegisterUrl;
+        return;
+      }
+      const btns = document.querySelectorAll('.tab-btn');
+      const loginForm = document.getElementById('form-login');
+      const regForm = document.getElementById('form-register');
+      if (tab === 'login') {
+        btns[0].classList.add('active'); btns[1].classList.remove('active');
+        regForm.classList.remove('active-form');
+        setTimeout(() => loginForm.classList.add('active-form'), 30);
+      } else {
+        btns[1].classList.add('active'); btns[0].classList.remove('active');
+        loginForm.classList.remove('active-form');
+        setTimeout(() => regForm.classList.add('active-form'), 30);
+      }
+    }
+
+    // ── VERIFY CODE ──
+    document.addEventListener('DOMContentLoaded', () => {
+      if ("{{ active_tab|default:'login' }}" === 'register') switchTab('register', true);
+
+      const codeInput = document.getElementById('codigo_verificacion');
+      const codeForm = document.getElementById('verify-code-form');
+      const codeSubmitBtn = document.getElementById('verify-code-submit-btn');
+      const expirationTimer = document.getElementById('code-expiration-timer');
+      const resendBtn = document.getElementById('resend-code-btn');
+      let isAutoSubmitting = false;
+
+      if (codeInput && codeForm) {
+        const tryAutoSubmit = () => {
+          if (codeInput.value.length !== 6 || isAutoSubmitting) return;
+          isAutoSubmitting = true;
+          if (codeSubmitBtn) { codeSubmitBtn.disabled = true; codeSubmitBtn.textContent = 'Verificando...'; }
+          codeForm.requestSubmit();
+        };
+        codeInput.addEventListener('input', function () {
+          this.value = this.value.replace(/\D/g, '').slice(0, 6);
+          tryAutoSubmit();
+        });
+        codeInput.addEventListener('paste', function () {
+          setTimeout(() => { codeInput.value = codeInput.value.replace(/\D/g, '').slice(0, 6); tryAutoSubmit(); }, 0);
+        });
+      }
+
+      if (expirationTimer) {
+        let remaining = parseInt(expirationTimer.dataset.seconds || '0', 10);
+        const fmt = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+        const tick = () => {
+          if (remaining <= 0) { expirationTimer.textContent = 'expirado'; if (codeSubmitBtn) codeSubmitBtn.disabled = true; return; }
+          expirationTimer.textContent = fmt(remaining--);
+          setTimeout(tick, 1000);
+        };
+        tick();
+      }
+
+      if (resendBtn) {
+        let cooldown = parseInt(resendBtn.dataset.cooldown || '0', 10);
+        const tickResend = () => {
+          if (cooldown <= 0) { resendBtn.disabled = false; resendBtn.textContent = 'Reenviar código'; return; }
+          resendBtn.disabled = true;
+          resendBtn.textContent = `Reenviar código (${cooldown--}s)`;
+          setTimeout(tickResend, 1000);
+        };
+        tickResend();
+      }
+    });
+  </script>
+</body>
+</html>

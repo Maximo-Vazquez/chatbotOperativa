@@ -1,0 +1,3 @@
+@startuml Hello words
+A -> B : Hello
+@enduml

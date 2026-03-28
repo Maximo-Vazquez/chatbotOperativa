@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- Original: Uploaded to SVG Repo, Generator: SVG Repo Mixer Tools -->
+<svg 
+    version="1.1" 
+    id="Layer_1" 
+    xmlns="http://www.w3.org/2000/svg" 
+    xmlns:xlink="http://www.w3.org/1999/xlink"  
+    viewBox="0 0 512 512" 
+    xml:space="preserve"
+>
+    <!-- Fondo principal -->
+    <rect x="3" y="64.08" style="fill:#FFFFFF;" width="506" height="383.896"/>
+    <g>
+        <path style="fill:#CCCCCC;" d="M506,67.048v377.904H6V67.048H506 M512,61.048H0v389.904h512V61.048z"/>
+        <rect x="3" y="127.84" style="fill:#CCCCCC;" width="505.84" height="6"/>
+    </g>
+
+    <!-- Círculos superiores -->
+    <circle cx="48.08" cy="98.504" r="12.584">
+        <!-- Ejemplo: animación de "rebote" vertical -->
+
+    </circle>
+
+    <circle style="fill:#E21B1B;" cx="89.312" cy="98.504" r="12.584">
+
+    </circle>
+
+    <circle style="fill:#F91E1E;" cx="130.568" cy="98.504" r="12.584">
+
+    </circle>
+
+    <!-- Rectángulo gris a la izquierda -->
+    <rect 
+        x="48.744" 
+        y="181.64" 
+        style="fill:#666666;" 
+        width="126.04" 
+        height="215.568"
+    >
+
+    </rect>
+
+    <!-- Rectángo rojo (banda horizontal) -->
+    <rect 
+        x="206.304" 
+        y="181.64" 
+        style="fill:#E21B1B;" 
+        width="256.96" 
+        height="38.16"
+    >
+        <!-- Ejemplo: leve parpadeo (cambio de opacidad) -->
+        <animate 
+            attributeName="opacity"
+            values="1;0.3;1"
+            dur="2s"
+            repeatCount="indefinite"
+            begin="0s"
+        />
+    </rect>
+
+    <!-- Varias franjas grises -->
+    <g>
+        <rect x="206.304" y="256.72" style="fill:#666666;" width="256.96" height="10.512">
+            <!-- Ejemplo: "mover" de izquierda a derecha -->
+            <animateTransform
+                attributeName="transform"
+                type="translate"
+                values="0; 20; 0"
+                dur="1.5s"
+                repeatCount="indefinite"
+            />
+        </rect>
+        <rect x="206.304" y="289.2" style="fill:#666666;" width="256.96" height="10.512">
+            <animateTransform
+                attributeName="transform"
+                type="translate"
+                values="0; 30; 0"
+                dur="1.2s"
+                repeatCount="indefinite"
+            />
+        </rect>
+        <rect x="206.304" y="321.76" style="fill:#666666;" width="256.96" height="10.512">
+            <animateTransform
+                attributeName="transform"
+                type="translate"
+                values="0; -20; 0"
+                dur="1.8s"
+                repeatCount="indefinite"
+            />
+        </rect>
+        <rect x="206.304" y="354.24" style="fill:#666666;" width="256.96" height="10.512">
+            <animateTransform
+                attributeName="transform"
+                type="translate"
+                values="0; 10; 0"
+                dur="1s"
+                repeatCount="indefinite"
+            />
+        </rect>
+        <rect x="206.304" y="386.72" style="fill:#666666;" width="256.96" height="10.512">
+            <animateTransform
+                attributeName="transform"
+                type="translate"
+                values="0; -15; 0"
+                dur="2s"
+                repeatCount="indefinite"
+            />
+        </rect>
+    </g>
+
+</svg>

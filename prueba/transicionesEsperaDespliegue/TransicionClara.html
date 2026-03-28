@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Inmersivo - Landscape</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            /* Paleta Dark Neon */
+            --neon-color: #22d3ee; /* Cyan Brillante */
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --glass-bg: rgba(0, 0, 0, 0.4);
+            --text-white: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+            --line-inactive: rgba(255, 255, 255, 0.2);
+        }
+
+        body {
+            margin: 0; padding: 0;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh;
+            background-color: white; /* Fondo página casi negro */
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        /* --- TARJETA PRINCIPAL (Landscape) --- */
+        .immersive-card {
+            position: relative;
+            width: 90%;
+            max-width: 900px; /* Ancho generoso */
+            min-height: 500px;
+            border-radius: 30px; /* Bordes modernos */
+            background: #000;
+            box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.7);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* Espaciado vertical */
+            padding: 4rem;
+            box-sizing: border-box;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Imagen de Fondo */
+        .card-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            /* Imagen de oficina tech / setup */
+            background-image: url('https://images.unsplash.com/photo-1519389950473-47ba0277781c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80');
+            background-size: cover; background-position: center;
+            z-index: 0;
+            transition: transform 10s ease;
+        }
+        
+        /* Efecto sutil de movimiento en fondo */
+        .immersive-card:hover .card-bg { transform: scale(1.05); }
+
+        /* Overlay Gradiente (Para legibilidad) */
+        .card-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(
+                to right, 
+                rgba(0,0,0,0.9) 0%, 
+                rgba(0,0,0,0.7) 50%, 
+                rgba(0,0,0,0.4) 100%
+            );
+            z-index: 1;
+        }
+
+        /* --- CONTENIDO --- */
+        .content-layer {
+            position: relative; z-index: 10;
+            height: 100%;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+
+        /* Header */
+        .header { margin-bottom: 3rem; text-align: left; }
+        .header h1 {
+            font-size: 2.8rem; font-weight: 800; color: var(--text-white);
+            margin: 0; letter-spacing: -1px; text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .header p {
+            font-size: 1.1rem; color: var(--text-muted); margin-top: 10px; font-weight: 400;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .badge-live {
+            background: rgba(34, 211, 238, 0.2); color: var(--neon-color);
+            padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700;
+            border: 1px solid rgba(34, 211, 238, 0.3);
+        }
+
+        /* --- TIMELINE HORIZONTAL (Lógica Original Mejorada) --- */
+        .timeline-container {
+            position: relative;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: 4rem; padding: 0 20px;
+        }
+
+        /* Pista de Fondo (Cálculo exacto para centrar) */
+        .timeline-track-bg {
+            position: absolute;
+            top: 25px; /* Mitad del icono (50px / 2) */
+            left: 90px; /* 20px padding + 70px (mitad step) */
+            right: 90px;
+            height: 3px;
+            background: var(--line-inactive);
+            z-index: 0; border-radius: 10px;
+        }
+
+        /* Barra de Progreso Neón */
+        .timeline-progress {
+            position: absolute; top: 0; left: 0; width: 0%; height: 100%;
+            background: var(--neon-color);
+            z-index: 1; transition: width 0.8s ease;
+            box-shadow: 0 0 20px var(--neon-color); border-radius: 10px;
+        }
+
+        .timeline-step {
+            position: relative; z-index: 2;
+            display: flex; flex-direction: column; align-items: center; width: 140px;
+        }
+
+        /* Círculos estilo Glass Dark */
+        .step-icon-circle {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.6); /* Fondo oscuro para tapar línea */
+            border: 2px solid var(--line-inactive);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.1rem; color: var(--text-muted);
+            transition: all 0.5s ease; backdrop-filter: blur(4px);
+        }
+
+        .step-label {
+            margin-top: 1.5rem; font-weight: 500; color: var(--text-muted);
+            font-size: 0.95rem; text-align: center; transition: all 0.4s ease; opacity: 0.6;
+        }
+
+        /* Estados Activos */
+        .timeline-step.active .step-icon-circle {
+            border-color: var(--neon-color); color: var(--neon-color);
+            background: rgba(34, 211, 238, 0.1);
+            box-shadow: 0 0 0 5px rgba(34, 211, 238, 0.1), 0 0 30px rgba(34, 211, 238, 0.4);
+            transform: scale(1.15);
+        }
+        .timeline-step.active .step-label { color: var(--text-white); opacity: 1; text-shadow: 0 0 10px rgba(34, 211, 238, 0.5); }
+
+        /* Estados Completados */
+        .timeline-step.completed .step-icon-circle {
+            border-color: var(--neon-color); background: var(--neon-color); color: #000;
+            box-shadow: 0 0 20px rgba(34, 211, 238, 0.4);
+        }
+        .timeline-step.completed .step-label { color: var(--neon-color); opacity: 1; }
+
+        /* Animaciones Iconos */
+        .fa-spinner, .fa-check { display: none; }
+        .timeline-step.active .fa-spinner { display: block; animation: spin 1s linear infinite; }
+        .timeline-step.active .static-icon { display: none; }
+        .timeline-step.completed .fa-check { display: block; animation: popIn 0.4s ease; }
+        .timeline-step.completed .static-icon, .timeline-step.completed .fa-spinner { display: none; }
+
+        /* Footer: Consola y Botón */
+        .footer-actions {
+            display: flex; justify-content: space-between; align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 2rem;
+        }
+
+        .console-log {
+            font-family: 'Courier New', monospace; font-size: 0.9rem; color: var(--neon-color);
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        /* Botón Blanco Píldora */
+        .btn-pill-white {
+            background: #ffffff; color: #000;
+            padding: 14px 40px; border-radius: 50px; border: none;
+            font-weight: 700; font-size: 1rem; cursor: pointer;
+            box-shadow: 0 10px 30px rgba(255,255,255,0.15);
+            transition: all 0.3s ease; opacity: 0.5; pointer-events: none;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .btn-pill-white.ready { opacity: 1; pointer-events: all; }
+        .btn-pill-white:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(255,255,255,0.25); }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes popIn { 0% { transform: scale(0); } 80% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        .blink::after { content: '_'; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+    </style>
+</head>
+<body>
+
+    <div class="immersive-card">
+        <div class="card-bg"></div>
+        <div class="card-overlay"></div>
+
+        <div class="content-layer">
+            
+            <div class="header">
+                <h1>Configuración Enterprise</h1>
+                <p><span class="badge-live">LIVE</span> Inicializando entorno seguro para tu tienda</p>
+            </div>
+
+            <div class="timeline-container">
+                <div class="timeline-track-bg">
+                    <div class="timeline-progress" id="progressBar"></div>
+                </div>
+
+                <div class="timeline-step" id="step1">
+                    <div class="step-icon-circle">
+                        <i class="fas fa-file-invoice-dollar static-icon"></i>
+                        <i class="fas fa-circle-notch fa-spinner"></i>
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="step-label">Facturación</div>
+                </div>
+
+                <div class="timeline-step" id="step2">
+                    <div class="step-icon-circle">
+                        <i class="fas fa-globe static-icon"></i>
+                        <i class="fas fa-circle-notch fa-spinner"></i>
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="step-label">Dominio</div>
+                </div>
+
+                <div class="timeline-step" id="step3">
+                    <div class="step-icon-circle">
+                        <i class="fas fa-server static-icon"></i>
+                        <i class="fas fa-circle-notch fa-spinner"></i>
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="step-label">Despliegue</div>
+                </div>
+
+                <div class="timeline-step" id="step4">
+                    <div class="step-icon-circle">
+                        <i class="fas fa-rocket static-icon"></i>
+                        <i class="fas fa-circle-notch fa-spinner"></i>
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="step-label">Finalizado</div>
+                </div>
+            </div>
+
+            <div class="footer-actions">
+                <div class="console-log">
+                    <i class="fas fa-terminal"></i>
+                    <span id="console-text">Esperando confirmación...</span><span class="blink"></span>
+                </div>
+
+                <button class="btn-pill-white" id="btnAccess" onclick="alert('Abriendo Panel...')">
+                    Ir al Panel <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+<script>
+    const stepsConfig = [
+        { id: 'step1', duration: 2000, label: 'Verificando transacción bancaria...' },
+        { id: 'step2', duration: 2500, label: 'Propagando DNS globales...' },
+        { id: 'step3', duration: 3000, label: 'Instalando contenedores seguros...' },
+        { id: 'step4', duration: 1500, label: 'Ejecutando limpieza final...' }
+    ];
+
+    const progressBar = document.getElementById('progressBar');
+    const consoleText = document.getElementById('console-text');
+    const btnAccess = document.getElementById('btnAccess');
+    
+    async function runDeployment() {
+        const totalSegments = stepsConfig.length - 1;
+        
+        for (let i = 0; i < stepsConfig.length; i++) {
+            const stepData = stepsConfig[i];
+            const stepElement = document.getElementById(stepData.id);
+            
+            // Activar
+            stepElement.classList.add('active');
+            consoleText.innerText = stepData.label;
+            
+            // Mover barra
+            if (i > 0) {
+                const percentage = (i / totalSegments) * 100;
+                let widthVal = percentage;
+                if(i < totalSegments) widthVal -= 5; // Ajuste visual
+                progressBar.style.width = `${widthVal}%`;
+            }
+
+            await new Promise(resolve => setTimeout(resolve, stepData.duration));
+
+            // Completar
+            stepElement.classList.remove('active');
+            stepElement.classList.add('completed');
+        }
+
+        // Final
+        progressBar.style.width = '100%';
+        consoleText.innerText = "Sistema operativo y listo.";
+        consoleText.style.color = "#ffffff";
+        
+        // Activar botón
+        btnAccess.classList.add('ready');
+    }
+
+    window.addEventListener('load', runDeployment);
+</script>   
+
+</body>
+</html>

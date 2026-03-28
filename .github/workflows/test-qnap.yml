@@ -1,0 +1,58 @@
+name: Test QNAP Connection
+
+# Esto activa el botón manual "Run workflow"
+on: workflow_dispatch
+
+jobs:
+  check-connection:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conectar al NAS y buscar Kubernetes
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.NAS_HOST }}
+          username: ${{ secrets.NAS_USER }}
+          key: ${{ secrets.NAS_SSH_KEY }}
+          port: ${{ secrets.NAS_PORT }}
+          # Aumentamos el timeout por si el NAS tarda en responder
+          timeout: 30s
+          script: |
+            echo "✅ ¡Conexión SSH establecida con el NAS!"
+            echo "Usuario: $USER | Host: $HOSTNAME"
+            echo "-----------------------------------"
+            
+            # 1. EXPORTAR RUTAS TÍPICAS DE QNAP
+            # Container Station suele esconder los binarios aquí:
+            export PATH=$PATH:/usr/local/bin:/share/CACHEDEV1_DATA/.qpkg/container-station/bin:/share/ZFS530_DATA/.qpkg/container-station/bin
+            
+            # 2. VERIFICAR SI EXISTE KUBECTL
+            echo "🔍 Buscando herramienta kubectl..."
+            
+            if command -v kubectl &> /dev/null; then
+                echo "✅ kubectl encontrado en: $(which kubectl)"
+                echo "📊 Versión:"
+                kubectl version --client --short
+                
+                echo "-----------------------------------"
+                echo "🖥️ Intentando conectar al clúster:"
+                
+                # Intento 1: Conexión directa
+                if kubectl get nodes; then
+                    echo "✅ ¡ÉXITO! Clúster accesible."
+                else
+                    echo "⚠️ Falló el intento estándar. Probando con config de K3s..."
+                    # Intento 2: Forzar configuración de K3s (común si no usas Container Station)
+                    export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+                    if kubectl get nodes; then
+                       echo "✅ ¡ÉXITO! Clúster accesible usando KUBECONFIG de K3s."
+                    else
+                       echo "❌ ERROR CRÍTICO: kubectl existe pero no puede conectar al clúster."
+                    fi
+                fi
+                
+            else
+                echo "❌ ERROR: El comando 'kubectl' no aparece en el PATH."
+                echo "Rutas buscadas: $PATH"
+                echo "Intenta buscarlo manualmente en el NAS con: 'find / -name kubectl'"
+                exit 1
+            fi

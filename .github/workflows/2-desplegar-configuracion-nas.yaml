@@ -1,0 +1,53 @@
+name: 2. Deploy Manual a QNAP
+
+# Solo se ejecuta cuando se pulsa "Run workflow" en GitHub
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del codigo
+        uses: actions/checkout@v4
+
+      - name: Copiar manifiestos al NAS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.NAS_HOST }}
+          username: ${{ secrets.NAS_USER }}
+          key: ${{ secrets.NAS_SSH_KEY }}
+          port: ${{ secrets.NAS_PORT }}
+          # Ajusta si tus archivos no estan en k8s/
+          source: "k8s/*.yaml"
+          target: "/share/homes/${{ secrets.NAS_USER }}/deployments/saas"
+          strip_components: 1
+
+      - name: Ejecutar despliegue en NAS
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.NAS_HOST }}
+          username: ${{ secrets.NAS_USER }}
+          key: ${{ secrets.NAS_SSH_KEY }}
+          port: ${{ secrets.NAS_PORT }}
+          script: |
+            echo "Iniciando despliegue manual en QNAP..."
+
+            # Rutas tipicas donde QNAP instala kubectl
+            export PATH=$PATH:/usr/local/bin:/share/CACHEDEV1_DATA/.qpkg/container-station/bin:/share/ZFS530_DATA/.qpkg/container-station/bin
+
+            # Si kubectl requiere config explicita, descomenta:
+            # export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+
+            DEPLOY_DIR=/share/homes/${{ secrets.NAS_USER }}/deployments/saas
+            mkdir -p "$DEPLOY_DIR"
+            cd "$DEPLOY_DIR"
+
+            echo "Aplicando manifiestos (ConfigMap, Deployment y Service)..."
+            kubectl apply -f "$DEPLOY_DIR"
+
+            echo "Reiniciando deployment saas..."
+            kubectl rollout restart deployment/saas-deployment
+            kubectl rollout status deployment/saas-deployment
+
+            echo "Despliegue finalizado con exito."

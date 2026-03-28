@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Despliegue de Sistema - Enterprise</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            /* Paleta Dark Mode Premium */
+            --bg-deep: #0f172a;      /* Azul muy oscuro */
+            --bg-surface: #1e293b;   /* Azul grisaceo para contraste */
+            --primary-glow: #0ea5e9; /* Sky Blue neon */
+            --primary-dim: #0284c7;  
+            --success: #10b981;      /* Emerald Green */
+            --text-main: #f8fafc;    /* Blanco casi puro */
+            --text-muted: #94a3b8;   /* Gris claro */
+            --line-inactive: #334155;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--bg-deep);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(14, 165, 233, 0.08), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(99, 102, 241, 0.08), transparent 25%);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        .grid-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .deploy-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            width: 90%;
+            max-width: 850px;
+            padding: 4rem 3rem;
+            border-radius: 24px;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.2), 0 20px 60px -10px rgba(0, 0, 0, 0.6);
+            position: relative;
+            z-index: 10;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin: 0 0 0.75rem 0;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .header p {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+            margin-bottom: 4rem;
+            font-weight: 300;
+        }
+
+        /* --- Línea de Tiempo --- */
+        .timeline-container {
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            padding: 0 20px; /* Padding importante para el cálculo del centro */
+        }
+
+        /* CORRECCIÓN: Track con márgenes exactos */
+        /* 20px (padding container) + 70px (mitad de step de 140px) = 90px */
+        .timeline-track-bg {
+            position: absolute;
+            top: 25px; 
+            left: 90px;  
+            right: 90px;
+            height: 2px;
+            background: var(--line-inactive);
+            z-index: 0;
+        }
+
+        /* CORRECCIÓN: La barra ahora es relativa a timeline-track-bg */
+        .timeline-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 100%; /* Ocupa la misma altura que el padre */
+            background: var(--primary-glow);
+            z-index: 1;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .timeline-step {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 140px; /* El centro está a 70px */
+        }
+
+        .step-icon-circle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--bg-deep); /* Tapar la línea */
+            border: 2px solid var(--line-inactive);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            transition: all 0.5s ease;
+            position: relative;
+        }
+
+        .step-label {
+            margin-top: 1.5rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            transition: all 0.4s ease;
+            opacity: 0.7;
+            letter-spacing: 0.5px;
+        }
+
+        /* Estados */
+        .timeline-step.active .step-icon-circle {
+            border-color: var(--primary-glow);
+            color: var(--primary-glow);
+            background: rgba(14, 165, 233, 0.1);
+            box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15), 0 0 20px rgba(14, 165, 233, 0.4);
+            transform: scale(1.1);
+        }
+        .timeline-step.active .step-label {
+            color: var(--text-main);
+            opacity: 1;
+            font-weight: 600;
+            text-shadow: 0 0 15px rgba(14, 165, 233, 0.5);
+        }
+
+        .timeline-step.completed .step-icon-circle {
+            border-color: var(--primary-glow);
+            background: var(--primary-glow);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.3);
+        }
+        .timeline-step.completed .step-label {
+            color: var(--primary-glow);
+            opacity: 1;
+        }
+
+        /* Iconos */
+        .fa-spinner, .fa-check { display: none; }
+        .timeline-step.active .fa-spinner { display: block; animation: spin 1.5s linear infinite; }
+        .timeline-step.active .static-icon { display: none; }
+        .timeline-step.completed .fa-check { display: block; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .timeline-step.completed .static-icon, .timeline-step.completed .fa-spinner { display: none; }
+
+        /* Pantalla de Éxito */
+        .success-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(15px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 24px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.6s ease;
+            z-index: 20;
+        }
+        .success-overlay.visible { opacity: 1; pointer-events: all; }
+
+        .success-content {
+            text-align: center;
+            transform: translateY(20px);
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .success-overlay.visible .success-content { transform: translateY(0); }
+
+        .success-icon-large {
+            font-size: 4rem;
+            color: var(--success);
+            margin-bottom: 1.5rem;
+            filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.4));
+        }
+
+        .success-overlay h2 {
+            font-size: 2rem;
+            color: var(--text-main);
+            margin: 0.5rem 0;
+        }
+
+        .btn-launch {
+            background: var(--text-main);
+            color: var(--bg-deep);
+            border: none;
+            padding: 1rem 3rem;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 2.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
+            font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-launch:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.2);
+            background: #fff;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes popIn { 0% { transform: scale(0); } 70% { transform: scale(1.4); } 100% { transform: scale(1); } }
+
+        /* Consola */
+        .status-terminal {
+            margin-top: 3rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: var(--primary-glow);
+            background: rgba(0,0,0,0.3);
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: inline-block;
+            border: 1px solid rgba(14, 165, 233, 0.2);
+        }
+        .blink-cursor::after {
+            content: '_';
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+    </style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<div class="deploy-card">
+    <div class="header">
+        <h1>Despliegue del Sistema</h1>
+        <p>Inicializando entorno de producción v2.4.0</p>
+    </div>
+
+    <div class="timeline-container">
+        <div class="timeline-track-bg">
+            <div class="timeline-progress" id="progressBar"></div>
+        </div>
+
+        <div class="timeline-step" id="step1">
+            <div class="step-icon-circle">
+                <i class="fas fa-file-invoice-dollar static-icon"></i>
+                <i class="fas fa-circle-notch fa-spinner"></i>
+                <i class="fas fa-check"></i>
+            </div>
+            <div class="step-label">Facturación</div>
+        </div>
+
+        <div class="timeline-step" id="step2">
+            <div class="step-icon-circle">
+                <i class="fas fa-shield-halved static-icon"></i>
+                <i class="fas fa-circle-notch fa-spinner"></i>
+                <i class="fas fa-check"></i>
+            </div>
+            <div class="step-label">SSL Seguro</div>
+        </div>
+
+        <div class="timeline-step" id="step3">
+            <div class="step-icon-circle">
+                <i class="fas fa-server static-icon"></i>
+                <i class="fas fa-circle-notch fa-spinner"></i>
+                <i class="fas fa-check"></i>
+            </div>
+            <div class="step-label">Despliegue</div>
+        </div>
+
+        <div class="timeline-step" id="step4">
+            <div class="step-icon-circle">
+                <i class="fas fa-code-branch static-icon"></i>
+                <i class="fas fa-circle-notch fa-spinner"></i>
+                <i class="fas fa-check"></i>
+            </div>
+            <div class="step-label">Verificación</div>
+        </div>
+    </div>
+
+    <div class="status-terminal">
+        > <span id="terminal-text">Esperando inicio...</span><span class="blink-cursor"></span>
+    </div>
+
+    <div class="success-overlay" id="successScreen">
+        <div class="success-content">
+            <div class="success-icon-large">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2>¡Sistema Operativo!</h2>
+            <p style="color: #94a3b8; margin-bottom: 0;">Todo ha salido perfecto.</p>
+            <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 5px;">ID de despliegue: #A8F-9920</p>
+            <button class="btn-launch" onclick="window.location.href='/panel-control'">Acceder al Panel</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const stepsConfig = [
+        { id: 'step1', duration: 2000, label: 'Verificando credenciales de pago...' },
+        { id: 'step2', duration: 2500, label: 'Estableciendo túnel seguro Cloudflare...' },
+        { id: 'step3', duration: 3500, label: 'Construyendo contenedores Docker...' },
+        { id: 'step4', duration: 1500, label: 'Ejecutando Health Checks finales...' }
+    ];
+
+    const progressBar = document.getElementById('progressBar');
+    const terminalText = document.getElementById('terminal-text');
+    
+    async function runDeployment() {
+        // Calcular porcentaje por paso
+        const totalSegments = stepsConfig.length - 1;
+        
+        for (let i = 0; i < stepsConfig.length; i++) {
+            const stepData = stepsConfig[i];
+            const stepElement = document.getElementById(stepData.id);
+            
+            // 1. Activar paso visualmente
+            stepElement.classList.add('active');
+            terminalText.innerText = stepData.label;
+            
+            // Lógica de barra de progreso
+            if (i > 0) {
+                const percentage = (i / totalSegments) * 100;
+                
+                // Pequeño ajuste visual para no cruzar el icono activo mientras anima
+                let widthVal = percentage;
+                if(i < totalSegments) widthVal -= 5; 
+                
+                progressBar.style.width = `${widthVal}%`;
+            }
+
+            // Simular proceso
+            await new Promise(resolve => setTimeout(resolve, stepData.duration));
+
+            // Marcar completado
+            stepElement.classList.remove('active');
+            stepElement.classList.add('completed');
+        }
+
+        // Finalizar
+        progressBar.style.width = '100%'; // Llena la línea completa simétricamente
+        terminalText.innerText = "Despliegue completado exitosamente.";
+        terminalText.style.color = "#10b981";
+
+        setTimeout(() => {
+            document.getElementById('successScreen').classList.add('visible');
+        }, 600);
+    }
+
+    window.addEventListener('load', runDeployment);
+</script>
+
+</body>
+</html> 
