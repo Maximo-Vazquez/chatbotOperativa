@@ -20,7 +20,7 @@ jobs:
           port: ${{ secrets.NAS_PORT }}
           # Ajusta si tus archivos no estan en k8s/
           source: "k8s/*.yaml"
-          target: "/share/homes/${{ secrets.NAS_USER }}/deployments/saas"
+          target: "/share/homes/${{ secrets.NAS_USER }}/deployments/chatbot-operativa"
           strip_components: 1
 
       - name: Ejecutar despliegue en NAS
@@ -39,15 +39,15 @@ jobs:
             # Si kubectl requiere config explicita, descomenta:
             # export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
-            DEPLOY_DIR=/share/homes/${{ secrets.NAS_USER }}/deployments/saas
+            DEPLOY_DIR=/share/homes/${{ secrets.NAS_USER }}/deployments/chatbot-operativa
             mkdir -p "$DEPLOY_DIR"
             cd "$DEPLOY_DIR"
 
             echo "Aplicando manifiestos (ConfigMap, Deployment y Service)..."
             kubectl apply -f "$DEPLOY_DIR"
 
-            echo "Reiniciando deployment saas..."
-            kubectl rollout restart deployment/saas-deployment
-            kubectl rollout status deployment/saas-deployment
+            echo "Reiniciando deployment chatbot-operativa..."
+            kubectl rollout restart deployment/chatbot-operativa-deployment
+            kubectl rollout status deployment/chatbot-operativa-deployment
 
             echo "Despliegue finalizado con exito."
