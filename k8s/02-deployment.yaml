@@ -38,6 +38,8 @@ spec:
               value: "false"
             - name: DJANGO_ALLOWED_HOSTS
               value: "ia.indutienda.com"
+            - name: DJANGO_CSRF_TRUSTED_ORIGINS
+              value: "https://ia.indutienda.com"
             - name: DB_ENGINE
               value: "django.db.backends.postgresql"
             - name: DB_NAME
@@ -93,6 +95,8 @@ spec:
               value: "false"
             - name: DJANGO_ALLOWED_HOSTS
               value: "ia.indutienda.com"
+            - name: DJANGO_CSRF_TRUSTED_ORIGINS
+              value: "https://ia.indutienda.com"
             - name: DB_ENGINE
               value: "django.db.backends.postgresql"
             - name: DB_NAME
