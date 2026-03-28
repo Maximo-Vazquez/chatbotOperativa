@@ -3,8 +3,6 @@ name: 1. Construir Docker Image (CI)
 # Se activa cuando creas un TAG o haces push a main (tú decides)
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
   workflow_dispatch:
