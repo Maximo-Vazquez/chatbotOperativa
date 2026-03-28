@@ -1,5 +1,5 @@
 name: 3. Deploy Manual a VPS
-run-name: "Deploy VPS - imagen: ${{ inputs.image_tag && inputs.image_tag != 'auto' && format('ghcr.io/maximo-vazquez/ventasoftware:{0}', inputs.image_tag) || 'auto (se resuelve a ultima v*)' }}"
+run-name: "Deploy VPS - imagen: ${{ inputs.image_tag && inputs.image_tag != 'auto' && format('ghcr.io/maximo-vazquez/chatbotoperativa:{0}', inputs.image_tag) || 'auto (se resuelve a ultima v*)' }}"
 
 on:
   workflow_dispatch:
@@ -23,7 +23,7 @@ jobs:
       contents: read
       packages: read
     env:
-      IMAGE_REPO: ghcr.io/maximo-vazquez/ventasoftware
+      IMAGE_REPO: ghcr.io/maximo-vazquez/chatbotoperativa
       IMAGE_TAG_REQUESTED: ${{ inputs.image_tag || 'auto' }}
 
     steps:
@@ -94,7 +94,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           source: "k8s/*.yaml"
-          target: "/home/${{ secrets.VPS_USER }}/deployments/saas"
+          target: "/home/${{ secrets.VPS_USER }}/deployments/chatbot-operativa"
           strip_components: 1
 
       - name: Ejecutar despliegue en VPS
@@ -137,7 +137,7 @@ jobs:
             run_kubectl version --client
             run_kubectl get nodes
 
-            DEPLOY_DIR="${HOME}/deployments/saas"
+            DEPLOY_DIR="${HOME}/deployments/chatbot-operativa"
             mkdir -p "$DEPLOY_DIR"
             cd "$DEPLOY_DIR"
 
@@ -147,18 +147,18 @@ jobs:
             run_kubectl apply -f "$DEPLOY_DIR/03-service.yaml"
 
             echo "Actualizando imagen del deployment a ${IMAGE_FULL}..."
-            run_kubectl set image deployment/saas-deployment django-app="${IMAGE_FULL}"
-            if ! run_kubectl set image deployment/saas-deployment django-migrate="${IMAGE_FULL}"; then
+            run_kubectl set image deployment/chatbot-operativa-deployment django-app="${IMAGE_FULL}"
+            if ! run_kubectl set image deployment/chatbot-operativa-deployment django-migrate="${IMAGE_FULL}"; then
               echo "No se pudo actualizar django-migrate con set image; se aplica patch al primer initContainer."
-              run_kubectl patch deployment/saas-deployment --type='json' \
+              run_kubectl patch deployment/chatbot-operativa-deployment --type='json' \
                 -p="[{\"op\":\"replace\",\"path\":\"/spec/template/spec/initContainers/0/image\",\"value\":\"${IMAGE_FULL}\"}]"
             fi
 
             echo "Configurando APP_VERSION=${{ steps.resolve_image.outputs.image_tag }} en el deployment..."
-            run_kubectl set env deployment/saas-deployment APP_VERSION="${{ steps.resolve_image.outputs.image_tag }}"
+            run_kubectl set env deployment/chatbot-operativa-deployment APP_VERSION="${{ steps.resolve_image.outputs.image_tag }}"
 
-            echo "Reiniciando deployment saas..."
-            run_kubectl rollout restart deployment/saas-deployment
-            run_kubectl rollout status deployment/saas-deployment --timeout=300s
+            echo "Reiniciando deployment chatbot-operativa..."
+            run_kubectl rollout restart deployment/chatbot-operativa-deployment
+            run_kubectl rollout status deployment/chatbot-operativa-deployment --timeout=300s
 
             echo "Despliegue finalizado con exito. Imagen desplegada: ${IMAGE_FULL}"

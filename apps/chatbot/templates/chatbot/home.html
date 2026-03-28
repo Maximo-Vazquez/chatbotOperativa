@@ -8,6 +8,9 @@
 
   <!-- Boxicons -->
   <link href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  <!-- KaTeX para fórmulas LaTeX -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
   <!-- marked.js para markdown real -->
   <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
   <!-- highlight.js para syntax highlighting -->
@@ -481,6 +484,13 @@
     }
     .ai-avatar svg { display: block; }
 
+    /* ══ KATEX ══ */
+    .katex { color: var(--text-primary); font-size: 1em; }
+    .katex-display { margin: .6em 0; overflow-x: auto; overflow-y: hidden;
+      scrollbar-width: thin; scrollbar-color: var(--scrollbar) transparent; }
+    .katex-display::-webkit-scrollbar { height: 4px; }
+    .katex-display::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+
     /* ══ API KEY CARD (configurada) ══ */
     .apikey-card {
       display: flex; align-items: center; gap: 10px;
@@ -878,15 +888,43 @@
     );
   }
 
+  function renderLatex(text) {
+    // Reemplaza fórmulas LaTeX con HTML de KaTeX antes de parsear markdown
+    // Orden: primero bloques ($$, \[), luego inline ($, \()
+    return text
+      .replace(/\$\$([\s\S]*?)\$\$/g, (_, f) => {
+        try { return katex.renderToString(f.trim(), { displayMode: true, throwOnError: false }); }
+        catch { return '$$' + f + '$$'; }
+      })
+      .replace(/\\\[([\s\S]*?)\\\]/g, (_, f) => {
+        try { return katex.renderToString(f.trim(), { displayMode: true, throwOnError: false }); }
+        catch { return '\\[' + f + '\\]'; }
+      })
+      .replace(/\$([^\n$]+?)\$/g, (_, f) => {
+        try { return katex.renderToString(f.trim(), { displayMode: false, throwOnError: false }); }
+        catch { return '$' + f + '$'; }
+      })
+      .replace(/\\\(([^\n]*?)\\\)/g, (_, f) => {
+        try { return katex.renderToString(f.trim(), { displayMode: false, throwOnError: false }); }
+        catch { return '\\(' + f + '\\)'; }
+      });
+  }
+
   function renderMD(text) {
     try {
-      // Proteger fórmulas LaTeX para que marked no las rompa
-      const safe = text
-        .replace(/\$\$([\s\S]*?)\$\$/g,  (_, f) => '`' + f.trim() + '`')   // $$...$$
-        .replace(/\$([^\n$]+?)\$/g,       (_, f) => '`' + f.trim() + '`')   // $...$
-        .replace(/\\\[([\s\S]*?)\\\]/g,   (_, f) => '`' + f.trim() + '`')   // \[...\]
-        .replace(/\\\(([\s\S]*?)\\\)/g,   (_, f) => '`' + f.trim() + '`');  // \(...\)
-      return enhanceCodeBlocks(marked.parse(safe));
+      // 1. Extraer y proteger bloques de código para que no se toque su contenido
+      const codeBlocks = [];
+      const withPlaceholders = text
+        .replace(/(```[\s\S]*?```|`[^`]+`)/g, (m) => {
+          codeBlocks.push(m);
+          return '\x00CODE' + (codeBlocks.length - 1) + '\x00';
+        });
+      // 2. Renderizar LaTeX en el texto restante
+      const withLatex = renderLatex(withPlaceholders);
+      // 3. Restaurar bloques de código
+      const restored = withLatex.replace(/\x00CODE(\d+)\x00/g, (_, i) => codeBlocks[+i]);
+      // 4. Parsear markdown y mejorar bloques de código
+      return enhanceCodeBlocks(marked.parse(restored));
     } catch(e) {
       console.error('renderMD error:', e);
       return '<pre style="white-space:pre-wrap">' + text.replace(/</g,'&lt;') + '</pre>';

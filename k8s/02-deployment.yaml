@@ -1,31 +1,31 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: saas-deployment
+  name: chatbot-operativa-deployment
   namespace: default
   labels:
-    app: saas
+    app: chatbot-operativa
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: saas
+      app: chatbot-operativa
   template:
     metadata:
       labels:
-        app: saas
+        app: chatbot-operativa
     spec:
       volumes:
         - name: shared-static-vol
           emptyDir: {}
         - name: nginx-conf-vol
           configMap:
-            name: saas-nginx-conf
+            name: chatbot-operativa-nginx-conf
       imagePullSecrets:
         - name: ghcr-cred
       initContainers:
         - name: django-migrate
-          image: ghcr.io/maximo-vazquez/ventasoftware:latest
+          image: ghcr.io/maximo-vazquez/chatbotoperativa:latest
           imagePullPolicy: Always
           workingDir: /app
           command: ["python", "manage.py", "migrate", "--noinput"]
@@ -34,67 +34,37 @@ spec:
               value: BlogInformatorio.settings
             - name: PYTHONUNBUFFERED
               value: "1"
-            - name: DEBUG
-              value: "False"
-            - name: ES_PRODUCCION
-              value: "True"
-            - name: TENANT_MANAGEMENT_API_BASE_URL
-              value: "https://pago.indutienda.com"
-            - name: USE_S3_MEDIA
-              value: "true"
-            - name: AWS_S3_ENDPOINT_URL
-              value: "https://s3.indutienda.com"
-            - name: AWS_STORAGE_BUCKET_NAME
-              value: "media"
-            - name: AWS_S3_REGION_NAME
-              value: "us-east-1"
-            - name: AWS_S3_SIGNATURE_VERSION
-              value: "s3v4"
-            - name: AWS_S3_ADDRESSING_STYLE
-              value: "path"
-            - name: AWS_QUERYSTRING_AUTH
-              value: "true"
-            - name: AWS_QUERYSTRING_EXPIRE
-              value: "3600"
-            - name: AWS_S3_FILE_OVERWRITE
+            - name: DJANGO_DEBUG
               value: "false"
-            - name: AWS_MEDIA_LOCATION
-              value: "saas"
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: minio-app-credentials
-                  key: saasAccessKey
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: minio-app-credentials
-                  key: saasSecretKey
+            - name: DJANGO_ALLOWED_HOSTS
+              value: "ia.indutienda.com"
+            - name: DB_ENGINE
+              value: "django.db.backends.postgresql"
             - name: DB_NAME
-              value: software_venta
+              value: chatbot
             - name: DB_HOST
               valueFrom:
                 secretKeyRef:
-                  name: db-credentials-saas
+                  name: db-credentials-chatbot
                   key: host
             - name: DB_PORT
               valueFrom:
                 secretKeyRef:
-                  name: db-credentials-saas
+                  name: db-credentials-chatbot
                   key: port
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
-                  name: db-credentials-saas
+                  name: db-credentials-chatbot
                   key: user
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: db-credentials-saas
+                  name: db-credentials-chatbot
                   key: password
       containers:
         - name: django-app
-          image: ghcr.io/maximo-vazquez/ventasoftware:latest
+          image: ghcr.io/maximo-vazquez/chatbotoperativa:latest
           imagePullPolicy: Always
           workingDir: /app
           command: ["/bin/sh", "-c"]
@@ -109,67 +79,39 @@ spec:
               value: BlogInformatorio.settings
             - name: PYTHONUNBUFFERED
               value: "1"
-            - name: DEBUG
-              value: "False"
-            - name: ES_PRODUCCION
-              value: "True"
-            - name: TENANT_MANAGEMENT_API_BASE_URL
-              value: "https://pago.indutienda.com"
-            - name: USE_S3_MEDIA
-              value: "true"
-            - name: AWS_S3_ENDPOINT_URL
-              value: "https://s3.indutienda.com"
-            - name: AWS_STORAGE_BUCKET_NAME
-              value: "media"
-            - name: AWS_S3_REGION_NAME
-              value: "us-east-1"
-            - name: AWS_S3_SIGNATURE_VERSION
-              value: "s3v4"
-            - name: AWS_S3_ADDRESSING_STYLE
-              value: "path"
-            - name: AWS_QUERYSTRING_AUTH
-              value: "true"
-            - name: AWS_QUERYSTRING_EXPIRE
-              value: "3600"
-            - name: AWS_S3_FILE_OVERWRITE
+            - name: DJANGO_DEBUG
               value: "false"
-            - name: AWS_MEDIA_LOCATION
-              value: "saas"
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: minio-app-credentials
-                  key: saasAccessKey
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: minio-app-credentials
-                  key: saasSecretKey
+            - name: DJANGO_ALLOWED_HOSTS
+              value: "ia.indutienda.com"
+            - name: DB_ENGINE
+              value: "django.db.backends.postgresql"
             - name: DB_NAME
-              value: software_venta
+              value: chatbot
             - name: DB_HOST
               valueFrom:
                 secretKeyRef:
-                  name: db-credentials-saas
+                  name: db-credentials-chatbot
                   key: host
             - name: DB_PORT
               valueFrom:
                 secretKeyRef:
-                  name: db-credentials-saas
+                  name: db-credentials-chatbot
                   key: port
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
-                  name: db-credentials-saas
+                  name: db-credentials-chatbot
                   key: user
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: db-credentials-saas
+                  name: db-credentials-chatbot
                   key: password
+            - name: APP_VERSION
+              value: "latest"
           volumeMounts:
             - name: shared-static-vol
-              mountPath: /app/staticfiles/type2
+              mountPath: /app/staticfiles
 
         - name: nginx-sidecar
           image: nginx:alpine
