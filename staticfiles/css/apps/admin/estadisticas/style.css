@@ -1,0 +1,170 @@
+/* Estilos para el contenedor */
+body {
+    font-family: 'DM Sans', sans-serif ;
+    background-color: white; /* Fondo claro */
+    color: #333; /* Texto oscuro */
+}
+.container {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr)); /* Inicialmente, 5 columnas con ancho flexible */
+    gap: 20px; /* Espacio entre tarjetas */
+    
+    padding: 20px;
+    max-width: 80%; /* Ajusta el ancho máximo del contenedor según sea necesario */
+    margin: 0 auto; /* Centra el contenedor */
+}
+
+/* Estilos para cada tarjeta */
+.card {
+    background-color: #ffffff; /* Tarjeta blanca */
+    border-radius: 2px;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2); /* Sombra suave */
+    padding: 20px;
+    text-align: center;
+    position: relative; /* Posición relativa para superponer elementos */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+/* Elevación al pasar el cursor */
+.card:hover {
+    transform: translateY(-5px); /* Eleva la tarjeta 5px */
+    box-shadow: 0px 6px 10px rgba(0, 0, 0, 0.5); /* Genera una sombra más pronunciada */
+}
+/* Tarjeta 1 */
+.card:nth-child(1) {
+    grid-row: span 2; /* Ocupa 2 filas */
+    grid-column: span 2;
+}
+
+/* Tarjeta 5 */
+.card:nth-child(5) {
+    grid-column: span 3;
+    grid-row: span 3; /* Ocupa 3 filas */
+}
+/* Tarjeta 6 */
+.card:nth-child(6) {
+    grid-column: span 2;
+
+}
+
+/* Tarjeta 4 */
+.card:nth-child(7) {
+    grid-column: span 2;
+}
+
+/* Tarjeta 8 */
+.card:nth-child(8) {
+    grid-column: span 2;
+
+}
+
+/* Tarjeta 8 */
+.card:nth-child(9) {
+    grid-column: span 2;
+
+}
+
+
+
+
+
+
+/* Estilos para dispositivos móviles */
+@media screen and (max-width: 1000px) {
+    .container {
+        grid-template-columns: repeat(3, minmax(0, 1fr)); /* Ajuste para dispositivos móviles */
+        max-width: 100%;
+    }
+    /* Tarjeta 1 */
+    .card:nth-child(1) {
+        grid-row: span 1; /* Ocupa 2 filas */
+        grid-column: span 3;
+    }
+
+    /* Tarjeta 5 */
+    .card:nth-child(5) {
+        grid-column: span 3;
+        grid-row: span 3; /* Ocupa 3 filas */
+    }
+    /* Tarjeta 6 */
+    .card:nth-child(6) {
+        grid-column: span 3;
+
+    }
+
+    /* Tarjeta 4 */
+    .card:nth-child(7) {
+        grid-column: span 3;
+    }
+
+    /* Tarjeta 8 */
+    .card:nth-child(8) {
+        grid-column: span 3;
+
+    }
+
+    /* Tarjeta 8 */
+    .card:nth-child(9) {
+        grid-column: span 3;
+
+    }
+    /* Tarjeta 4 */
+    .card:nth-child(10) {
+        
+        grid-column: span 3;
+    }
+
+}
+
+/* Estilos para dispositivos móviles */
+@media screen and (max-width: 662px) {
+    /* .container {
+        grid-template-columns: 1fr; 
+        max-width: 100%;
+        padding: 10px;
+        gap: 15px; 
+    }*/
+    .container {
+
+        padding: 5px;
+        display: flex;
+        flex-direction: column;
+    }
+    /* Tarjeta 1 */
+    .card:nth-child(1) {
+        grid-row: span 1; /* Ocupa 2 filas */
+        grid-column: span 1;
+
+    }
+    /* Tarjeta 5 */
+    .card:nth-child(5) {
+        grid-column: span 1;
+        grid-row: span 1;
+
+    }
+    /* Tarjeta 6 */
+    .card:nth-child(6) {
+        grid-column: span 1;
+        grid-row: span 1;
+
+    }
+    /* Tarjeta 4 */
+    .card:nth-child(8) {
+        grid-column: span 1;
+        grid-row: span 1;
+    }
+    /* Tarjeta 4 */
+    .card:nth-child(9) {
+        grid-column: span 1;
+        grid-row: span 1;
+    }
+    /* Tarjeta 4 */
+    .card:nth-child(10) {
+        grid-column: span 1;
+        grid-row: span 1;
+    }
+    /* Tarjeta 4 */
+    .card:nth-child(7) {
+        grid-column: span 1;
+        grid-row: span 1;
+    }
+}

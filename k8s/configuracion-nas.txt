@@ -1,0 +1,117 @@
+==============================================================================
+GUÍA DE CONFIGURACIÓN: DESPLIEGUE AUTOMÁTICO QNAP (GITHUB ACTIONS + SSH)
+==============================================================================
+Fecha: 24/11/2025
+Dispositivo: QNAP TS-464
+Usuario: MAXIMO
+Método: SSH Directo (Sin Self-Hosted Runner)
+
+------------------------------------------------------------------------------
+1. ARCHIVOS LOCALES (EN TU PC WINDOWS)
+------------------------------------------------------------------------------
+Ubicación actual: C:\Users\MAXIMO\
+
+1. id_qnap_deploy      -> LLAVE PRIVADA. (¡SECRETA! Esta va en los Secretos de GitHub).
+2. id_qnap_deploy.pub  -> LLAVE PÚBLICA. (Esta es la que copiamos dentro del NAS).
+
+------------------------------------------------------------------------------
+2. INSTALACIÓN MANUAL DE LA LLAVE EN EL NAS (EL PROCESO "DIFÍCIL")
+------------------------------------------------------------------------------
+Si la copia automática falla, este es el procedimiento infalible para QNAP.
+
+A. PREPARACIÓN EN WINDOWS:
+   1. Abre el archivo 'id_qnap_deploy.pub' con el Bloc de Notas.
+   2. Copia todo el texto (empieza por "ssh-ed25519..." y termina con tu correo).
+
+B. COMANDOS EN EL NAS (Conéctate por SSH con contraseña primero):
+   Comando: ssh -p 22 MAXIMO@mi-nas-vaz.myqnapcloud.com
+
+   Una vez dentro, ejecuta uno por uno:
+
+   1. CORREGIR PERMISOS DE CARPETA DE USUARIO (CRÍTICO EN QNAP):
+      (Si la carpeta home tiene permisos de escritura para "group" u "others", SSH bloquea la llave).
+      
+      chmod g-w /share/homes/MAXIMO
+      chmod o-w /share/homes/MAXIMO
+
+   2. PREPARAR CARPETA .SSH:
+      rm -rf ~/.ssh                  (Borra configuración vieja corrupta)
+      mkdir -p ~/.ssh                (Crea carpeta nueva)
+      chmod 700 ~/.ssh               (Solo tú puedes ver esta carpeta)
+
+   3. PEGAR LA LLAVE USANDO 'VI' (Editor de texto):
+      
+      a. Ejecuta: vi ~/.ssh/authorized_keys
+      b. Presiona la tecla 'i' (entras en modo Insertar).
+      c. Pega la llave pública que copiaste en Windows (Clic derecho suele pegar).
+         *Asegúrate de que quede en UNA SOLA LÍNEA*.
+      d. Presiona la tecla 'Esc'.
+      e. Escribe :wq y dale ENTER (Write & Quit).
+
+   4. PROTEGER EL ARCHIVO DE LLAVES:
+      chmod 600 ~/.ssh/authorized_keys
+
+   5. SALIR:
+      exit
+
+C. PRUEBA FINAL DESDE WINDOWS:
+   ssh -p 22 -i id_qnap_deploy MAXIMO@mi-nas-vaz.myqnapcloud.com
+   (Debe entrar DIRECTO sin pedir contraseña).
+
+------------------------------------------------------------------------------
+3. CONFIGURACIÓN EN GITHUB (SECRETS)
+------------------------------------------------------------------------------
+Ruta: Tu Repositorio -> Settings -> Secrets and variables -> Actions -> New Secret
+
+
+VARIABLES A CREAR:
+1. NAS_HOST     -> mi-nas-vaz.myqnapcloud.com
+2. NAS_PORT     -> 22 (O el que configures en el futuro)
+3. NAS_USER     -> MAXIMO
+4. NAS_SSH_KEY  -> Copia y pega AQUÍ todo el contenido del archivo 'id_qnap_deploy' (la privada).
+                   (Incluyendo -----BEGIN... y ...END-----)
+
+------------------------------------------------------------------------------
+4. ARCHIVO DEL WORKFLOW (.github/workflows/deploy.yml)
+------------------------------------------------------------------------------
+Este archivo le dice a GitHub qué hacer.
+
+name: Deploy to QNAP
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.NAS_HOST }}
+          username: ${{ secrets.NAS_USER }}
+          key: ${{ secrets.NAS_SSH_KEY }}
+          port: ${{ secrets.NAS_PORT }}
+          script: |
+            echo "Conectado al NAS QNAP..."
+            
+            # Exportar rutas comunes donde QNAP esconde kubectl
+            export PATH=$PATH:/usr/local/bin:/share/CACHEDEV1_DATA/.qpkg/container-station/bin
+            
+            # Verificar conexión al cluster
+            kubectl get nodes
+            
+            # AQUÍ PONES TUS COMANDOS DE DESPLIEGUE
+            # Ejemplo: kubectl rollout restart deployment/mi-app
+
+------------------------------------------------------------------------------
+5. NOTAS DE SEGURIDAD IMPORTANTES
+------------------------------------------------------------------------------
+1. PUERTO 22: Actualmente estás usando el puerto 22. En cuanto todo funcione,
+   cambia el puerto SSH en el Panel de Control del QNAP a algo como 22464
+   y actualiza el Port Forwarding en tu router y el secreto NAS_PORT en GitHub.
+   
+2. ACTUALIZACIONES: Mantén el firmware del NAS (QTS) siempre actualizado.

@@ -1,0 +1,533 @@
+/* =================== RESET =================== */
+/* Eliminar márgenes y rellenos por defecto */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Establecer una fuente base */
+
+.containerr {
+    width: 100%;
+}
+
+/* =================== TARJETAS DE PLANES =================== */
+.plan-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 20px;
+    gap: 2rem;
+}
+
+.card {
+    background-color: #fff; /* Tarjetas blancas */
+    color: #000; /* Texto negro */
+    padding: 2rem;
+    border-radius: 10px;
+    width: 500px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+}
+
+.elevated {
+    box-shadow: 0 6px 16px 0 rgba(0, 0, 0, .1);
+}
+
+/* Efecto de hover */
+.card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 2px 5px rgba(0, 123, 255, 0.8);
+}
+
+.card h3 {
+    margin-top: 0;
+    font-size: 1.8rem;
+    color: black; /* Color negro para el título */
+}
+
+.card .alert {
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+
+.card ul {
+    list-style-type: none;
+    padding: 0;
+    text-align: left;
+    flex-grow: 1; /* Ocupa el espacio disponible */
+}
+
+.card li {
+    margin: 0.5rem 0;
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.card li::before {
+    content: '✔';
+    position: absolute;
+    left: 0;
+    color: #28a745;
+}
+
+/* Botón "Adquirir" */
+.card button {
+    background-color: #000000; /* Botón negro */
+    color: #fff;
+    padding: 0.75rem 1.5rem;
+    margin-top: 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 100%;
+}
+
+.card button:hover {
+    background-color: #333333; /* Negro más oscuro al hacer hover */
+}
+
+.price {
+    font-size: 2rem;
+    color: #000;
+    margin: 1rem 0;
+}
+
+.price span {
+    font-size: 0.75rem;
+    color: #777;
+}
+
+.price-custom {
+    font-size: 1.5rem;
+    color: #007bff;
+    font-weight: bold;
+    margin: 1rem 0;
+}
+
+/* Botón WhatsApp */
+.whatsapp-button {
+    background-color: #25D366 !important; /* Verde oficial de WhatsApp */
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-top: 1.5rem; /* Espacio consistente */
+}
+
+.whatsapp-button:hover {
+    background-color: #1aa34a !important; /* Verde más oscuro */
+}
+
+.whatsapp-button i {
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+}
+
+/* Separador */
+.separator {
+    border-top: 1px solid #b5b5b5;
+    margin: 1rem 0;
+}
+
+/* Responsividad para pantallas pequeñas */
+@media (max-width: 768px) {
+    .plan-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .card {
+        width: 90%;
+    }
+}
+
+/* =================== MODAL =================== */
+/* Estilos para el modal personalizado */
+.modal-custom {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content-custom {
+    border-radius: 13px;
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 100%;
+    height: 600px;
+    max-width: 1200px;
+    display: flex;
+    
+}
+
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: black;
+    text-decoration: none;
+}
+
+.modal-body-custom {
+    display: flex;
+    width: 100%;
+}
+
+.modal-left,
+.modal-right {
+    flex: 1;
+    padding: 20px;
+}
+
+.modal-imagen {
+    max-width: 100%;
+    height: auto;
+}
+
+.modal-precio {
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+#modalCaracteristicas {
+    list-style-type: none;
+    padding: 0;
+}
+
+#modalCaracteristicas li {
+    margin: 5px 0;
+    font-size: 16px;
+}
+/* Estilos para el contenedor de la imagen en el modal */
+.modal-image-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+}
+
+.modal-imagen {
+    width: 100%;
+    height: auto;
+    border-radius: 5px;
+}
+
+/* Estilos para los botones de navegación */
+.nav-button {
+    position: absolute;
+    top: 50%;
+    background-color: rgba(0,0,0,0.5);
+    color: white;
+    border: none;
+    padding: 12px;
+    cursor: pointer;
+    border-radius: 50%;
+    transform: translateY(-50%);
+}
+
+#prevButton {
+    left: 10px;
+}
+
+#nextButton {
+    right: 10px;
+}
+
+/* =================== PREGUNTAS FRECUENTES =================== */
+.faq-section {
+    padding: 4rem 2rem;
+    color: #333;
+}
+
+.section-title {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+.section-title::after {
+    content: '';
+    width: 100px;
+    height: 3px;
+    background-color: #000;
+    display: block;
+    margin: 0.5rem auto 0;
+}
+
+.accordion-button {
+    background-color: #fff;
+    color: #000;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.accordion-button:hover,
+.accordion-button:focus {
+    background-color: white;
+}
+
+/* Sobrescribir los estilos para que no cambien al estar expandido */
+.accordion-button:not(.collapsed) {
+    color: #000; /* Mantener el color del texto negro */
+    background-color: #fff; /* Mantener el fondo blanco */
+    box-shadow: none; /* Eliminar cualquier sombra adicional */
+    border-color: #ddd; /* Mantener el borde */
+}
+
+.accordion-body {
+    background-color: #e4e4e4;
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+
+/* =================== SECCIÓN DE HARDWARE =================== */
+.hardware-section {
+    padding: 4rem 2rem;
+
+}
+
+.hardware-section .section-title {
+    color: #333;
+}
+
+.hardware-container {
+    display: flex;
+    flex-wrap: wrap; /* Permite que los elementos se envuelvan */
+    justify-content: center; /* Centra los elementos */
+    gap: 2rem; /* Espacio entre las tarjetas */
+    margin-top: 2rem;
+    width: 80%;
+    margin: 0 auto;
+}
+
+.hardware-card {
+    background-color: #fff;
+    color: #000;
+    padding: 1.5rem;
+    border-radius: 10px;
+    width: calc((100% - 4rem) / 3); /* Divide el ancho disponible en 3 columnas */
+
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    text-align: center;
+    flex-grow: 1; /* Permite que las tarjetas ocupen espacio restante */
+}
+
+.hardware-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 2px 15px rgba(0, 123, 255, 0.7);
+}
+
+.hardware-card i {
+    font-size: 3rem;
+    color: #007bff;
+    margin-bottom: 1rem;
+}
+
+.hardware-card h4 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.hardware-card p {
+    font-size: 1rem;
+    color: #555;
+}
+@media (max-width: 1300px) {
+    .hardware-container {
+        display: flex;
+        flex-wrap: wrap; /* Permite que los elementos se envuelvan */
+        justify-content: center; /* Centra los elementos */
+        gap: 2rem; /* Espacio entre las tarjetas */
+        margin-top: 2rem;
+        width: 100%;
+        margin: 0 auto;
+    }
+    
+    .hardware-card {
+        background-color: #fff;
+        color: #000;
+        padding: 1.5rem;
+        border-radius: 10px;
+        width: calc((100% - 4rem) / 3); /* Divide el ancho disponible en 3 columnas */
+    
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        text-align: center;
+        flex-grow: 1; /* Permite que las tarjetas ocupen espacio restante */
+    }
+}
+@media (max-width: 1030px) {
+    .hardware-container {
+
+        width: 100%;
+
+    }
+    
+    .hardware-card {
+
+        width: calc((100% - 4rem) / 2); /* Divide el ancho disponible en 3 columnas */
+    
+
+    }
+}
+@media (max-width: 660px) {
+    .hardware-container {
+
+
+        width: 100%;
+
+    }
+    
+    .hardware-card {
+
+        width: calc((100% - 4rem) / 1); /* Divide el ancho disponible en 3 columnas */
+    
+    }
+}
+
+/* =================== SECCIÓN DE PRODUCTOS =================== */
+.productos-section .section-title {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+.productos-section .section-title::after {
+    content: '';
+    width: 100px;
+    height: 3px;
+    background-color: #007bff;
+    display: block;
+    margin: 0.5rem auto 0;
+}
+
+.productos-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+    gap: 2rem;
+    max-width: 1400px; /* Ajusta este valor según tu diseño */
+    margin: 0 auto; /* Centra el contenedor horizontalmente */
+}
+
+.producto-card {
+    background-color: #fff;
+    color: #000;
+    padding: 1.5rem;
+    border-radius: 10px;
+    width: 400px; /* Limita el ancho máximo */
+    max-width: 400px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+
+.producto-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 2px 15px rgba(0, 123, 255, 0.7);
+}
+
+.producto-imagen {
+    width: 100%;
+    height: 200px;
+    object-fit: contain;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.producto-titulo {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: #007bff;
+}
+
+.producto-descripcion {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    color: #555;
+    text-align: justify;
+}
+
+.producto-precio {
+    font-size: 1.2rem;
+    color: #28a745;
+    margin-bottom: 1rem;
+}
+
+.producto-precio span {
+    font-size: 0.8rem;
+    color: #777;
+}
+
+.btn-adquirir {
+    background-color: black;
+    color: #fff;
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-size: 1rem;
+    width: 100%;
+}
+.btn-detalle {
+    background-color: #0056b3;
+    color: #fff;
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-size: 1rem;
+    width: 100%;
+}
+
+.btn-adquirir:hover {
+    background-color: #0056b3;
+}
+
+@media (min-width: 1300px) {
+    .producto-card {
+        flex: 1 1 calc(48.333% - 2rem); /* Tres tarjetas por fila */
+    }
+}
+

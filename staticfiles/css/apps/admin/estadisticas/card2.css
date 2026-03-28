@@ -1,0 +1,359 @@
+/* Estilos para la tarjeta específica */
+#card2 {
+    
+}
+/* Elevación al pasar el cursor */
+
+/* Estilos para el contenido */
+.content {
+    display: flex;
+    align-items: flex-start;
+}
+
+/* Estilos para la parte izquierda */
+#card2 .left {
+    margin-right: auto; /* Empuja el contenido a la izquierda */
+}
+
+/* Estilos para el título */
+#card2 .title {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 5px; /* Ajusta el margen entre el título y la cantidad */
+}
+
+/* Estilos para la cantidad */
+#card2 .amount {
+    font-size: 24px;
+    color: #28a745; /* Color verde para la cantidad */
+    margin-top: 5px; /* Espacio entre el título y la cantidad */
+}
+
+
+/* Estilos para el icono */
+#card2 .icon {
+    font-size: 50px;
+}
+
+
+
+
+/*_______________________________*/
+
+
+/* Estilos para la tarjeta específica */
+#card3 {
+    /* Estilos personalizados según los requerimientos */
+}
+
+
+/* Estilos para la parte izquierda */
+#card3 .left {
+    margin-right: auto; /* Empuja el contenido a la izquierda */
+}
+
+/* Estilos para el título */
+#card3 .title {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 5px; /* Ajusta el margen entre el título y la cantidad */
+}
+
+/* Estilos para la cantidad */
+#card3 .amount {
+    font-size: 24px;
+}
+
+/* Estilos para el icono */
+#card3 .icon {
+    font-size: 50px;
+}
+
+
+
+/*_______________________________*/
+
+
+/* Estilos para la tarjeta específica */
+#card4 {
+    /* Estilos personalizados según los requerimientos */
+}
+
+
+
+/* Estilos para la parte izquierda */
+#card4 .left {
+    margin-right: auto; /* Empuja el contenido a la izquierda */
+}
+
+/* Estilos para el título */
+#card4 .title {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 5px; /* Ajusta el margen entre el título y la cantidad */
+}
+
+/* Estilos para la cantidad */
+#card4 .amount {
+    font-size: 24px;
+}
+
+/* Estilos para el icono */
+#card4 .icon {
+    font-size: 50px;
+}
+
+
+
+
+
+/*_______________________________*/
+
+/* Estilos para la lista de pedidos */
+.pedido-lista {
+    list-style: none;
+    padding: 0;
+    border-top: 2px solid #007bff; /* Borde superior azul */
+}
+
+/* Estilos para cada ítem de la lista */
+.pedido-lista li {
+    margin-bottom: 10px;
+    padding: 10px;
+    font-size: 16px;
+    line-height: 1.5;
+    border-bottom: 1px solid #e0e0e0; /* Borde inferior gris claro */
+}
+/* Estilos para el total de pedidos */
+#total {
+    color: #007bff; /* Color azul para el total */
+}
+
+/* Estilos para pedidos completados */
+#completados {
+    color: #28a745; /* Color verde para pedidos completados */
+}
+
+/* Estilos para pedidos en espera */
+#pendientes {
+    color: #ffc107; /* Color naranja para pedidos en espera */
+}
+
+/* Estilos para pedidos cancelados */
+#cancelados {
+    color: #dc3545; /* Color rojo para pedidos cancelados */
+}
+
+/* Estilos para los nombres de los totales */
+.pedido-lista li span:first-child {
+    font-weight: bold;
+}
+
+
+/*-----------------------------------------------ESTO ES LA TABLA----------------------------------------------*/
+/* Estilos para la tarjeta específica */
+#card5 {
+    
+    border-radius: 10px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    justify-content: center; /* Centra la tabla dentro del contenedor */
+    overflow-x: auto;
+}
+
+/* Estilos para el título */
+#card5 .title {
+    margin-bottom: 20px;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+/* Estilos para el contenedor de la tabla */
+#card5 .table-container {
+    overflow-x: auto;
+}
+
+/* Estilos para la tabla */
+#card5 table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* Estilos para las celdas de la tabla */
+#card5 th, #card5 td {
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+/* Estilos para las filas impares de la tabla */
+#card5 tbody tr:nth-child(odd) {
+    background-color: #e6f7ff; /* Azul claro para filas impares */
+}
+
+/* Estilos para las filas pares de la tabla */
+#card5 tbody tr:nth-child(even) {
+    background-color: white; /* Otro color claro para filas pares */
+}
+
+
+/* Estilos para el campo de búsqueda */
+#card5 #searchInput {
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+/*_______________________________*/
+/* Estilos para la tarjeta específica */
+#card6 {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+/* Estilos para el contenido */
+#card6 .content {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Estilos para el título */
+#card6 .title {
+    margin-bottom: 20px;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+/* Estilos para la lista de estadísticas */
+#card6 .statistics {
+    width: 100%;
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Estilos para la lista de estadísticas */
+#card6 .statistic-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Estilos para los elementos de la lista de estadísticas */
+#card6 .statistic-list li {
+    padding: 15px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 16px;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Estilos para los nombres de las estadísticas */
+#card6 .statistic-name {
+    font-weight: bold;
+}
+
+/* Estilos para los valores de las estadísticas */
+#card6 .value {
+    color: #007bff; /* Color azul para los valores de las estadísticas */
+}
+
+
+
+
+
+/* Nueva regla para centrar verticalmente los elementos */
+@media screen and (max-width: 1490px) and (min-width: 1000px) {
+    .content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center; /* Alinea verticalmente los elementos en el centro */
+    }
+}
+
+/* Nueva regla para centrar verticalmente los elementos */
+@media screen and (max-width: 762px) and (min-width: 662px) {
+    .content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center; /* Alinea verticalmente los elementos en el centro */
+    }
+}
+
+
+
+
+
+
+
+
+/* Estilos para la tarjeta específica */
+#card1:hover {
+    /* Elevación al pasar el cursor */
+    transform: translateY(-5px); /* Eleva la tarjeta 5px */
+    box-shadow: 0px 6px 10px rgba(0, 0, 255, 0.5); /* Genera una sombra azul más pronunciada */
+}
+
+/* Estilos para la tarjeta específica */
+#card2:hover {
+    /* Elevación al pasar el cursor */
+    transform: translateY(-5px); /* Eleva la tarjeta 5px */
+    box-shadow: 0px 6px 10px green; /* Genera una sombra verde más pronunciada */
+}
+
+/* Estilos para la tarjeta específica */
+#card3:hover {
+    /* Elevación al pasar el cursor */
+    transform: translateY(-5px); /* Eleva la tarjeta 5px */
+    box-shadow: 0px 6px 10px rgba(255, 0, 0, 0.5); /* Genera una sombra roja más pronunciada */
+}
+
+/* Estilos para la tarjeta específica */
+#card4:hover {
+    /* Elevación al pasar el cursor */
+    transform: translateY(-5px); /* Eleva la tarjeta 5px */
+    box-shadow: 0px 6px 10px rgba(0, 0, 255, 0.5); /* Genera una sombra azul más pronunciada */
+}
+
+
+
+
+
+
+
+/* Estilos para la tarjeta específica */
+#card5:hover {
+    /* Elevación al pasar el cursor */
+    transform: translateY(-5px); /* Eleva la tarjeta 5px */
+    box-shadow: 0px 6px 10px orange; /* Genera una sombra azul más pronunciada */
+}
+/* Estilos para la tarjeta específica */
+#card6:hover {
+    /* Elevación al pasar el cursor */
+    transform: translateY(-5px); /* Eleva la tarjeta 5px */
+    box-shadow: 0px 6px 10px green; /* Genera una sombra azul más pronunciada */
+}
+
+
+
+
+
+/* Estilos para los botones de información */
+#card5 .info-button {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+/* Estilos para el ícono dentro del botón */
+#card5 .info-button i {
+    font-size: 24px;
+}
+

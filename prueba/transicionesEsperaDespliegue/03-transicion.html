@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Despliegue de Tienda - Enterprise</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --accent-primary: #2563eb;
+            --accent-success: #059669;
+            --accent-warning: #d97706;
+            --accent-error: #dc2626;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--bg-secondary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        .deploy-container {
+            background: var(--bg-primary);
+            width: 90%;
+            max-width: 800px;
+            padding: 3.5rem 3rem;
+            border-radius: 16px;
+            border: 2px solid var(--accent-primary);
+            box-shadow: var(--shadow-lg), 0 0 20px rgba(5, 150, 105, 0.15);
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3.5rem;
+        }
+
+        .header-badge {
+            display: inline-block;
+            background-color: var(--bg-secondary);
+            color: var(--text-secondary);
+            padding: 0.375rem 0.875rem;
+            border-radius: 6px;
+            font-size: 0.813rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .header h1 {
+            font-size: 1.875rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.938rem;
+            font-weight: 400;
+        }
+
+        .timeline-container {
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 3rem;
+            padding: 0 1.25rem;
+        }
+
+        .timeline-track {
+            position: absolute;
+            top: 27px;
+            left: 83px;
+            right: 83px;
+            height: 2px;
+            background: var(--border-color);
+            z-index: 0;
+        }
+
+        .timeline-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 100%;
+            background: var(--accent-primary);
+            z-index: 1;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .timeline-step {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 130px;
+        }
+
+        .step-icon-wrapper {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .step-label {
+            margin-top: 1rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-step.active .step-icon-wrapper {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .timeline-step.active .step-label {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .timeline-step.completed .step-icon-wrapper {
+            border-color: var(--accent-success);
+            background: var(--accent-success);
+            color: white;
+        }
+
+        .timeline-step.completed .step-label {
+            color: var(--accent-success);
+            font-weight: 500;
+        }
+
+        .timeline-step.error .step-icon-wrapper {
+            border-color: var(--accent-error);
+            background: var(--accent-error);
+            color: white;
+        }
+
+        .timeline-step.error .step-label {
+            color: var(--accent-error);
+            font-weight: 600;
+        }
+
+        .timeline-step.warning .step-icon-wrapper {
+            border-color: var(--accent-warning);
+            background: var(--accent-warning);
+            color: white;
+        }
+
+        .timeline-step.warning .step-label {
+            color: var(--accent-warning);
+            font-weight: 600;
+        }
+
+        .fa-spinner,
+        .fa-check {
+            display: none;
+        }
+
+        .timeline-step.active .fa-spinner {
+            display: block;
+            animation: spin 1.2s linear infinite;
+        }
+
+        .timeline-step.active .static-icon {
+            display: none;
+        }
+
+        .timeline-step.completed .fa-check {
+            display: block;
+        }
+
+        .timeline-step.completed .static-icon,
+        .timeline-step.completed .fa-spinner {
+            display: none;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .status-terminal {
+            margin-top: 3rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+        }
+
+        .terminal-line {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .terminal-prompt {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .blink-cursor::after {
+            content: '|';
+            animation: blink 1s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        .status-alert {
+            display: none;
+            margin-top: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(220, 38, 38, 0.2);
+            background: rgba(220, 38, 38, 0.08);
+            color: var(--accent-error);
+            font-size: 0.875rem;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .status-alert.visible {
+            display: flex;
+        }
+
+        .status-alert.warning {
+            border-color: rgba(217, 119, 6, 0.3);
+            background: rgba(217, 119, 6, 0.12);
+            color: var(--accent-warning);
+        }
+
+        .progress-indicator {
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+
+        .progress-text {
+            font-size: 0.813rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .success-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+            z-index: 20;
+        }
+
+        .success-overlay.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .success-content {
+            text-align: center;
+            max-width: 500px;
+        }
+
+        .success-icon-large {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            border-radius: 50%;
+            background: rgba(5, 150, 105, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .success-icon-large i {
+            font-size: 2.5rem;
+            color: var(--accent-success);
+            display: block;
+        }
+
+        .success-overlay .fa-check {
+            display: block !important;
+        }
+
+        .success-overlay h2 {
+            font-size: 1.875rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.025em;
+        }
+
+        .success-overlay p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .deploy-id {
+            display: inline-block;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+        }
+
+        .btn-launch {
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            padding: 0.875rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.938rem;
+            cursor: pointer;
+            margin-top: 2rem;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            box-shadow: var(--shadow-sm);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-launch:hover {
+            background: #1d4ed8;
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+
+        .btn-launch:active {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            .deploy-container {
+                padding: 2.5rem 1.5rem;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .timeline-step {
+                width: 90px;
+            }
+
+            .step-icon-wrapper {
+                width: 48px;
+                height: 48px;
+                font-size: 1.125rem;
+            }
+
+            .step-label {
+                font-size: 0.75rem;
+            }
+
+            .timeline-track {
+                left: 60px;
+                right: 60px;
+                top: 23px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="deploy-container" data-status-url="" data-redirect-url="">
+    <div class="header">
+        <div class="header-badge">Enterprise v2.4.0</div>
+        <h1>Despliegue de Tienda</h1>
+        <p>Configurando tu plataforma de comercio electronico</p>
+    </div>
+
+    <div class="timeline-container">
+        <div class="timeline-track">
+            <div class="timeline-progress" id="progressBar"></div>
+        </div>
+
+        <div class="timeline-step" id="step1">
+            <div class="step-icon-wrapper">
+                <i class="fas fa-credit-card static-icon"></i>
+                <i class="fas fa-circle-notch fa-spinner"></i>
+                <i class="fas fa-check"></i>
+            </div>
+            <div class="step-label">Verificacion</div>
+        </div>
+
+        <div class="timeline-step" id="step2">
+            <div class="step-icon-wrapper">
+                <i class="fas fa-globe static-icon"></i>
+                <i class="fas fa-circle-notch fa-spinner"></i>
+                <i class="fas fa-check"></i>
+            </div>
+            <div class="step-label">Cloudflare</div>
+        </div>
+
+        <div class="timeline-step" id="step3">
+            <div class="step-icon-wrapper">
+                <i class="fas fa-rocket static-icon"></i>
+                <i class="fas fa-circle-notch fa-spinner"></i>
+                <i class="fas fa-check"></i>
+            </div>
+            <div class="step-label">Despliegue</div>
+        </div>
+
+        <div class="timeline-step" id="step4">
+            <div class="step-icon-wrapper">
+                <i class="fas fa-check-double static-icon"></i>
+                <i class="fas fa-circle-notch fa-spinner"></i>
+                <i class="fas fa-check"></i>
+            </div>
+            <div class="step-label">Validacion</div>
+        </div>
+    </div>
+
+    <div class="status-terminal">
+        <div class="terminal-line">
+            <span class="terminal-prompt">&gt;</span>
+            <span id="terminal-text">Inicializando proceso de despliegue...</span><span class="blink-cursor"></span>
+        </div>
+        <div class="status-alert" id="statusAlert">
+            <i class="fas fa-triangle-exclamation"></i>
+            <span id="statusAlertText"></span>
+        </div>
+    </div>
+
+    <div class="progress-indicator">
+        <p class="progress-text">Este proceso puede tomar algunos minutos</p>
+    </div>
+
+    <div class="success-overlay" id="successScreen">
+        <div class="success-content">
+            <div class="success-icon-large">
+                <i class="fas fa-check"></i>
+            </div>
+            <h2>Despliegue completado</h2>
+            <p>Redirigiendo al estado del pago...</p>
+            <div class="deploy-id" id="deployId">ID: #--</div>
+            <a class="btn-launch" id="statusButton" href="#">Ver estado del pago</a>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const container = document.querySelector('.deploy-container');
+    const params = new URLSearchParams(window.location.search);
+    const pagoId = params.get('pago_id');
+    const statusUrl = container
+        ? (container.dataset.statusUrl || (pagoId ? `/pagos/despliegue/${pagoId}/estado/` : ''))
+        : '';
+    const redirectUrl = container
+        ? (container.dataset.redirectUrl || (pagoId ? `/pagos/estado/${pagoId}/` : ''))
+        : '';
+    const progressBar = document.getElementById('progressBar');
+    const terminalText = document.getElementById('terminal-text');
+    const successScreen = document.getElementById('successScreen');
+    const statusAlert = document.getElementById('statusAlert');
+    const statusAlertText = document.getElementById('statusAlertText');
+    const deployId = document.getElementById('deployId');
+    const statusButton = document.getElementById('statusButton');
+
+    if (deployId && pagoId) {
+        deployId.textContent = `ID: #${pagoId}`;
+    }
+    if (statusButton && redirectUrl) {
+        statusButton.href = redirectUrl;
+    }
+
+    const steps = [
+        { id: 'step1', key: 'payment', fallback: 'Verificando metodo de pago...' },
+        { id: 'step2', key: 'cloudflare', fallback: 'Configurando dominio en Cloudflare...' },
+        { id: 'step3', key: 'tenant', fallback: 'Desplegando tenant...' },
+        { id: 'step4', key: 'validation', fallback: 'Validando servicios finales...' }
+    ];
+    const allowWarnings = true;
+    const maxWaitMs = 300000;
+    const pollIntervalMs = 2500;
+    const stepAdvanceDelayMs = 450;
+    const startTime = Date.now();
+
+    let pollingTimer = null;
+    let finished = false;
+    let successShown = false;
+    let visualCompleted = 0;
+    let isAnimating = false;
+    let queuedTarget = null;
+    let finishAfterAnimation = false;
+    let finishRedirect = '';
+
+    function setStepState(stepElement, state) {
+        stepElement.classList.remove('active', 'completed', 'error', 'warning');
+        if (state === 'completed' || state === 'skipped') {
+            stepElement.classList.add('completed');
+        } else if (state === 'warning') {
+            stepElement.classList.add('warning');
+        } else if (state === 'error') {
+            stepElement.classList.add('error');
+        } else if (state === 'active') {
+            stepElement.classList.add('active');
+        }
+    }
+
+    function updateProgress(completedCount) {
+        const totalSegments = steps.length - 1;
+        if (totalSegments <= 0) {
+            progressBar.style.width = '0%';
+            return;
+        }
+        if (completedCount <= 1) {
+            progressBar.style.width = '0%';
+            return;
+        }
+        const percentage = Math.min(100, ((completedCount - 1) / totalSegments) * 100);
+        progressBar.style.width = `${percentage}%`;
+    }
+
+    function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function requestFinish(targetUrl) {
+        finishAfterAnimation = true;
+        finishRedirect = targetUrl || redirectUrl;
+        finished = true;
+        if (!isAnimating && visualCompleted >= steps.length) {
+            showSuccess();
+        }
+    }
+
+    function showSuccess() {
+        if (successShown) {
+            return;
+        }
+        successShown = true;
+        successScreen.classList.add('visible');
+        if (finishRedirect) {
+            setTimeout(() => {
+                window.location.href = finishRedirect;
+            }, 1800);
+        }
+    }
+
+    async function animateTo(targetCount, warningSet, messages) {
+        if (isAnimating) {
+            queuedTarget = { targetCount, warningSet, messages };
+            return;
+        }
+        isAnimating = true;
+
+        while (visualCompleted < targetCount) {
+            const stepIndex = visualCompleted;
+            const stepElement = document.getElementById(steps[stepIndex].id);
+            if (stepElement) {
+                setStepState(stepElement, 'active');
+            }
+            terminalText.textContent = messages[stepIndex] || steps[stepIndex].fallback;
+
+            await delay(stepAdvanceDelayMs);
+
+            if (stepElement) {
+                const nextState = warningSet.has(stepIndex) ? 'warning' : 'completed';
+                setStepState(stepElement, nextState);
+            }
+            visualCompleted += 1;
+            updateProgress(visualCompleted);
+        }
+
+        isAnimating = false;
+
+        if (queuedTarget && queuedTarget.targetCount > visualCompleted) {
+            const nextTarget = queuedTarget;
+            queuedTarget = null;
+            animateTo(nextTarget.targetCount, nextTarget.warningSet, nextTarget.messages);
+            return;
+        }
+
+        if (finishAfterAnimation && visualCompleted >= steps.length) {
+            showSuccess();
+        }
+    }
+
+    function showAlert(message, isWarning) {
+        statusAlertText.textContent = message || 'Se produjo un error durante el despliegue.';
+        statusAlert.classList.add('visible');
+        statusAlert.classList.toggle('warning', !!isWarning);
+    }
+
+    function hideError() {
+        statusAlert.classList.remove('visible');
+        statusAlert.classList.remove('warning');
+        statusAlertText.textContent = '';
+    }
+
+    function applyStatus(data) {
+        const stepsData = (data && data.steps) || {};
+        const elapsed = Date.now() - startTime;
+        const continueOnError = allowWarnings && data && data.has_error;
+        const timeoutFinish = allowWarnings && elapsed >= maxWaitMs;
+        const warningSet = new Set();
+        const messages = steps.map(step => {
+            return (stepsData[step.key] && stepsData[step.key].message) || step.fallback;
+        });
+        let firstWarning = '';
+        let firstError = '';
+
+        const doneStates = steps.map((step, index) => {
+            const state = (stepsData[step.key] && stepsData[step.key].state) || 'pending';
+            const isError = state === 'error';
+            if (allowWarnings && isError) {
+                warningSet.add(index);
+                if (!firstWarning) {
+                    firstWarning = messages[index];
+                }
+            }
+            if (!allowWarnings && isError && !firstError) {
+                firstError = messages[index];
+            }
+            return state === 'completed' || state === 'skipped' || (allowWarnings && isError);
+        });
+
+        if (continueOnError) {
+            for (let i = 0; i < doneStates.length; i++) {
+                doneStates[i] = true;
+            }
+        }
+
+        if (timeoutFinish && !continueOnError) {
+            for (let i = 0; i < doneStates.length; i++) {
+                if (!doneStates[i]) {
+                    doneStates[i] = true;
+                    warningSet.add(i);
+                }
+            }
+            if (!firstWarning) {
+                firstWarning = 'Tiempo de espera alcanzado. Puedes continuar y reintentar luego.';
+            }
+        }
+
+        let targetCompleted = 0;
+        for (let i = 0; i < doneStates.length; i++) {
+            if (doneStates[i]) {
+                targetCompleted = i + 1;
+            } else {
+                break;
+            }
+        }
+
+        if (firstError && !allowWarnings) {
+            terminalText.textContent = firstError;
+            showAlert(firstError, false);
+            return { allDone: false };
+        }
+
+        if (allowWarnings && firstWarning) {
+            showAlert(firstWarning, true);
+        } else {
+            hideError();
+        }
+
+        warningSet.forEach(index => {
+            if (index < visualCompleted) {
+                const stepElement = document.getElementById(steps[index].id);
+                if (stepElement) {
+                    setStepState(stepElement, 'warning');
+                }
+            }
+        });
+
+        animateTo(targetCompleted, warningSet, messages);
+
+        if (!isAnimating && targetCompleted < steps.length) {
+            const stepElement = document.getElementById(steps[targetCompleted].id);
+            if (stepElement) {
+                setStepState(stepElement, 'active');
+            }
+            terminalText.textContent = messages[targetCompleted] || steps[targetCompleted].fallback;
+        }
+
+        const allDone = targetCompleted >= steps.length;
+        if (allDone) {
+            terminalText.textContent = firstWarning
+                ? 'Despliegue completado con advertencias.'
+                : 'Despliegue completado exitosamente.';
+        }
+        return { allDone };
+    }
+
+    function initLoader() {
+        visualCompleted = 0;
+        updateProgress(visualCompleted);
+        const firstStep = document.getElementById(steps[0].id);
+        if (firstStep) {
+            setStepState(firstStep, 'active');
+        }
+        terminalText.textContent = steps[0].fallback;
+    }
+
+    function runFallbackSequence() {
+        let currentIndex = 0;
+        visualCompleted = 0;
+
+        function advance() {
+            if (currentIndex >= steps.length) {
+                requestFinish(redirectUrl);
+                return;
+            }
+
+            const step = steps[currentIndex];
+            const stepElement = document.getElementById(step.id);
+            if (stepElement) {
+                setStepState(stepElement, 'active');
+            }
+            terminalText.textContent = step.fallback;
+
+            setTimeout(() => {
+                if (stepElement) {
+                    setStepState(stepElement, 'completed');
+                }
+                visualCompleted = currentIndex + 1;
+                updateProgress(visualCompleted);
+                currentIndex += 1;
+                advance();
+            }, 1400);
+        }
+
+        advance();
+    }
+
+    async function pollStatus() {
+        if (!statusUrl || finished) {
+            return;
+        }
+        try {
+            const response = await fetch(statusUrl, { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const data = await response.json();
+            const statusResult = applyStatus(data);
+
+            if (!allowWarnings && data && data.has_error) {
+                finished = true;
+                return;
+            }
+
+            if (statusResult && statusResult.allDone) {
+                requestFinish(data.redirect_url || redirectUrl);
+                return;
+            }
+        } catch (error) {
+            terminalText.textContent = 'Esperando respuesta del servidor...';
+        }
+
+        pollingTimer = setTimeout(pollStatus, pollIntervalMs);
+    }
+
+    window.addEventListener('load', () => {
+        initLoader();
+        if (!statusUrl) {
+            runFallbackSequence();
+            return;
+        }
+        pollStatus();
+    });
+</script>
+
+</body>
+</html>

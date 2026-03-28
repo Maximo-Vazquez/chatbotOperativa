@@ -1,0 +1,11 @@
+# Saco el entorno virtual
+/venv/
+/media/
+/pruebas/
+/Documentacion/
+
+*.sqlite3
+**/__pycache__/
+*.pyc
+.env
+.env.*

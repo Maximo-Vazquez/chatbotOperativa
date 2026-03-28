@@ -1,0 +1,104 @@
+:root {
+    --color-fondo: #ffffff;
+    --color-primario: #007BFF;
+    --color-secundario: #333333;
+    --color-borde: #007BFF;
+    --color-dropzone: #f0f8ff;
+    --color-dropzone-hover: #e0f0ff;
+    --color-texto: #333333;
+    --color-borde-imagen: #007BFF;
+  }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: var(--color-fondo);
+    color: var(--color-texto);
+  }
+
+  h1 {
+    text-align: center;
+    color: var(--color-secundario);
+    margin-bottom: 30px;
+  }
+
+  .estructura-input-file {
+    width: 90%;
+    max-width: 600px;
+    background-color: var(--color-fondo);
+
+    padding: 30px;
+
+    margin: 0 auto;
+  }
+
+  .drop-zone {
+    border: 2px dashed var(--color-borde);
+    border-radius: 10px;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--color-secundario);
+    transition: background-color 0.3s, border-color 0.3s;
+    background-color: var(--color-dropzone);
+    cursor: pointer;
+  }
+
+  .drop-zone.dragover {
+    background-color: var(--color-dropzone-hover);
+    border-color: var(--color-primario);
+  }
+
+  .drop-zone:hover {
+    background-color: var(--color-dropzone-hover);
+  }
+
+  .drop-zone input[type="file"] {
+    display: none;
+  }
+
+  .image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+  }
+
+  .image-grid img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    display: block;
+    border: 2px solid var(--color-borde);
+    border-radius: 8px;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+
+  .image-grid img:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+  }
+
+  /* Opcional: estilos para arrastrar un archivo sobre la página */
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+
+  body.dragging {
+    background: #e0f0ff;
+  }
+
+  @media (max-width: 600px) {
+    .estructura-input-file {
+      padding: 20px;
+    }
+
+    .drop-zone {
+      padding: 30px 10px;
+    }
+
+    .image-grid img {
+      height: 100px;
+    }
+  }

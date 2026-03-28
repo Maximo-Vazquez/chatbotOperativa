@@ -1,0 +1,35 @@
+llave: 
+
+3mM44WkB26Fhsc_BwDrs4HFByH96x8BjN4KYW
+
+3mM44WkB26Fhsc_BwDrs4HFByH96x8BjN4KYW
+
+3mM44WkB26Fhsc_BwDrs4HFByH96x8BjN4KYW
+
+secret
+NYD5RXDGy4127rcvYPDs7w
+NYD5RXDGy4127rcvYPDs7w
+NYD5RXDGy4127rcvYPDs7w
+
+#WEBHOOKS
+https://bibliotecadvschaco.com/metodo/mercadoPago/api
+
+pagos, order
+
+clave secreta: 4ddc105682b9be07bfb467ed038f7dd69f6eff399f02673f30164eb55169a737
+
+
+
+datos tarjeta  n
+5031755734530604
+
+11/25
+123
+APRO
+12345678
+
+
+
+
+
+

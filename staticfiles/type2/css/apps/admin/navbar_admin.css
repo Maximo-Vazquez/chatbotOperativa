@@ -1,0 +1,92 @@
+/* =================== NAVEGACIÓN =================== */
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 2rem;
+    background-color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.fixed-top {
+    position: relative;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 1030;
+}
+.logo {
+    width: 40px;
+    height: 40px;
+    margin-right: 0.5rem;
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+}
+
+.nav-left span {
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.nav-left span img {
+    margin-left: 0.5rem;
+    height: 20px;
+}
+
+.nav-right {
+    display: flex;
+    align-items: center;
+}
+
+.nav-right a {
+    text-decoration: none;
+    color: black;
+    margin: 0 1rem;
+    font-size: 1rem;
+    transition: color 0.3s ease;
+}
+
+.nav-right a:hover {
+    color: #007bff;
+}
+
+.nav-right .seleccion {
+    border: 1px solid black;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    background-color: black;
+    color: white;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.nav-right .seleccion:hover {
+    background-color: #333;
+}
+.cerrar-sesion {
+    border: 2px solid #FF4C4C; /* Borde ligeramente más grueso y con un tono rojo claro */
+    padding: 0.3rem 1.1rem; /* Aumenta el padding para un mejor espacio interno */
+    border-radius: 25px; /* Bordes más redondeados */
+    background-color: #FF4C4C; /* Rojo claro */
+    color: #FFFFFF !important; /* Texto en blanco */
+    font-weight: bold; /* Texto en negrita para mayor legibilidad */
+    cursor: pointer; /* Cambia el cursor al pasar sobre el botón */
+    transition: background-color 0.9s ease, color 0.9s ease, border-color 0.9s ease, transform 0.9s ease, box-shadow 0.9s ease !important;
+    outline: none; /* Elimina el borde adicional al hacer clic */
+}
+
+.cerrar-sesion:hover {
+    background-color: #D93636; /* Rojo oscuro al hacer hover */
+    border-color: #D93636; /* Borde coincide con el color de fondo */
+    transform: scale(1.05); /* Ligero aumento de tamaño para efecto interactivo */
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2); /* Añade una sombra al hover */
+}
+
+.cerrar-sesion:active {
+    background-color: #B32424; /* Rojo aún más oscuro al hacer clic */
+    border-color: #B32424;
+    transform: scale(1); /* Vuelve al tamaño original */
+    box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1); /* Reduce la sombra al hacer clic */
+}

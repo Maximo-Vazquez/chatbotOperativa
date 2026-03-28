@@ -1,0 +1,89 @@
+
+.sidebar {
+    position: fixed;
+    left: 0;
+    height: 100%;
+    width: 350px;
+    background: #fff;
+    padding: 10px 0px;
+    transition: all 0.5s ease;
+    overflow-y: auto; 
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.40);
+    border-radius: 0px 30px 30px 0px;
+    z-index: 100;
+}
+
+.sidebar .logo-content .logo {
+    display: flex;
+    color: black;
+    height: 50px;
+    width: 100%;
+    align-items: center;
+    cursor: pointer;
+}
+
+.sidebar .logo-content .logo i {
+    font-size: 28px;
+    margin-right: 10px;
+}
+
+
+
+.sidebar .nav-list {
+    overflow-y: auto;
+    margin-top: 20px;
+    list-style: none;
+}
+
+.sidebar .nav-list li {
+    position: relative;
+    margin: 8px 0;
+    list-style: none;
+}
+
+.sidebar .nav-list li a {
+    display: flex;
+    align-items: center;
+    height: 50px;
+    text-decoration: none;
+    color: black;
+    border-radius: 12px;
+    transition: all 0.4s ease;
+}
+
+.sidebar .nav-list li a:hover {
+    background: #00b400;
+}
+
+.sidebar .nav-list li a i {
+    min-width: 50px;
+    text-align: center;
+    font-size: 20px;
+}
+
+.sidebar .nav-list li .links-name {
+    font-size: 18px;
+    font-weight: 400;
+    white-space: nowrap;
+}
+
+
+
+
+
+.sidebar .nav-list li a:hover ~ .tooltip {
+    transition: all 0.4s ease;
+    top: 50%;
+}
+
+.sidebar.closed {
+    transform: translateX(-85%);
+}
+.cotenido_closed {
+    display: none;
+}
+
+.logo-name {
+    margin-left: 30px;
+    width:  280px;
+}

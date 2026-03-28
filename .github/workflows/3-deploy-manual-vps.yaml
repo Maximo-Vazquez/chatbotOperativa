@@ -1,0 +1,164 @@
+name: 3. Deploy Manual a VPS
+run-name: "Deploy VPS - imagen: ${{ inputs.image_tag && inputs.image_tag != 'auto' && format('ghcr.io/maximo-vazquez/ventasoftware:{0}', inputs.image_tag) || 'auto (se resuelve a ultima v*)' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Tag a desplegar. Usa auto para tomar la ultima version real publicada (v*)."
+        required: true
+        default: "auto"
+        type: string
+  workflow_call:
+    inputs:
+      image_tag:
+        required: false
+        type: string
+        default: "auto"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    env:
+      IMAGE_REPO: ghcr.io/maximo-vazquez/ventasoftware
+      IMAGE_TAG_REQUESTED: ${{ inputs.image_tag || 'auto' }}
+
+    steps:
+      - name: Checkout del codigo
+        uses: actions/checkout@v4
+
+      - name: Resolver tag real de imagen
+        id: resolve_image
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          requested="${IMAGE_TAG_REQUESTED}"
+          if [[ "$requested" != "auto" && "$requested" != "latest" ]]; then
+            echo "image_tag=$requested" >> "$GITHUB_OUTPUT"
+            echo "Usando tag solicitado manualmente: $requested"
+            exit 0
+          fi
+
+          owner="${{ github.repository_owner }}"
+          package="${IMAGE_REPO##*/}"
+          tags=""
+
+          for scope in users orgs; do
+            api="https://api.github.com/${scope}/${owner}/packages/container/${package}/versions?per_page=100"
+            if response=$(curl -fsSL \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "$api" 2>/dev/null); then
+              tags=$(printf "%s" "$response" \
+                | jq -r '.[].metadata.container.tags[]?' \
+                | grep -E '^v[0-9]+(\.[0-9]+)*$' \
+                | sort -uV || true)
+              if [[ -n "${tags}" ]]; then
+                break
+              fi
+            fi
+          done
+
+          if [[ -z "${tags}" ]]; then
+            echo "No se encontro ningun tag versionado v* en GHCR para ${IMAGE_REPO}" >&2
+            exit 1
+          fi
+
+          latest_tag=$(printf "%s\n" "$tags" | tail -n 1)
+          echo "image_tag=$latest_tag" >> "$GITHUB_OUTPUT"
+          echo "Tag real detectado automaticamente: $latest_tag"
+
+      - name: Mostrar version efectiva
+        shell: bash
+        run: |
+          IMAGE_FULL="${IMAGE_REPO}:${{ steps.resolve_image.outputs.image_tag }}"
+          echo "Imagen efectiva: ${IMAGE_FULL}"
+          {
+            echo "## Deploy VPS Hostinger"
+            echo "- Tag solicitado: ${IMAGE_TAG_REQUESTED}"
+            echo "- Tag efectivo: ${{ steps.resolve_image.outputs.image_tag }}"
+            echo "- Imagen efectiva: ${IMAGE_FULL}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Copiar manifiestos al VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          source: "k8s/*.yaml"
+          target: "/home/${{ secrets.VPS_USER }}/deployments/saas"
+          strip_components: 1
+
+      - name: Ejecutar despliegue en VPS
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script: |
+            set -euo pipefail
+            IMAGE_FULL="${{ env.IMAGE_REPO }}:${{ steps.resolve_image.outputs.image_tag }}"
+            KUBECONFIG_PATH="${HOME}/.kube/config"
+
+            echo "Iniciando despliegue en VPS..."
+            echo "Imagen objetivo: ${IMAGE_FULL}"
+
+            run_kubectl() {
+              if command -v kubectl >/dev/null 2>&1; then
+                kubectl --kubeconfig "${KUBECONFIG_PATH}" "$@"
+              elif command -v k3s >/dev/null 2>&1; then
+                k3s kubectl --kubeconfig "${KUBECONFIG_PATH}" "$@"
+              else
+                echo "No se encontro kubectl ni k3s en el VPS." >&2
+                exit 1
+              fi
+            }
+
+            if [[ ! -r "${KUBECONFIG_PATH}" ]]; then
+              echo "No se puede leer kubeconfig en: ${KUBECONFIG_PATH}" >&2
+              echo "Solucion en el VPS (como root):" >&2
+              echo "  mkdir -p /home/${{ secrets.VPS_USER }}/.kube" >&2
+              echo "  cp /etc/rancher/k3s/k3s.yaml /home/${{ secrets.VPS_USER }}/.kube/config" >&2
+              echo "  chown -R ${{ secrets.VPS_USER }}:${{ secrets.VPS_USER }} /home/${{ secrets.VPS_USER }}/.kube" >&2
+              echo "  chmod 600 /home/${{ secrets.VPS_USER }}/.kube/config" >&2
+              exit 1
+            fi
+
+            echo "Chequeo rapido de acceso al cluster..."
+            run_kubectl version --client
+            run_kubectl get nodes
+
+            DEPLOY_DIR="${HOME}/deployments/saas"
+            mkdir -p "$DEPLOY_DIR"
+            cd "$DEPLOY_DIR"
+
+            echo "Aplicando manifiestos base..."
+            run_kubectl apply -f "$DEPLOY_DIR/01-configmap-nginx.yaml"
+            run_kubectl apply -f "$DEPLOY_DIR/02-deployment.yaml"
+            run_kubectl apply -f "$DEPLOY_DIR/03-service.yaml"
+
+            echo "Actualizando imagen del deployment a ${IMAGE_FULL}..."
+            run_kubectl set image deployment/saas-deployment django-app="${IMAGE_FULL}"
+            if ! run_kubectl set image deployment/saas-deployment django-migrate="${IMAGE_FULL}"; then
+              echo "No se pudo actualizar django-migrate con set image; se aplica patch al primer initContainer."
+              run_kubectl patch deployment/saas-deployment --type='json' \
+                -p="[{\"op\":\"replace\",\"path\":\"/spec/template/spec/initContainers/0/image\",\"value\":\"${IMAGE_FULL}\"}]"
+            fi
+
+            echo "Configurando APP_VERSION=${{ steps.resolve_image.outputs.image_tag }} en el deployment..."
+            run_kubectl set env deployment/saas-deployment APP_VERSION="${{ steps.resolve_image.outputs.image_tag }}"
+
+            echo "Reiniciando deployment saas..."
+            run_kubectl rollout restart deployment/saas-deployment
+            run_kubectl rollout status deployment/saas-deployment --timeout=300s
+
+            echo "Despliegue finalizado con exito. Imagen desplegada: ${IMAGE_FULL}"

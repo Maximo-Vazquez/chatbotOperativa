@@ -1,0 +1,277 @@
+================================================================================
+GUÍA MAESTRA: DESPLIEGUE DJANGO EN KUBERNETES (NAS) CON PATRÓN SIDECAR
+================================================================================
+
+OBJETIVO:
+Desplegar 2 aplicaciones Django independientes (Ventas y SaaS) en un NAS.
+- Aislamiento total (si una cae, la otra sigue).
+- Base de Datos externa.
+- Archivos estáticos servidos por Nginx (Sidecar) mediante volumen compartido.
+- Ingress único para enrutamiento por dominio.
+
+ESTRATEGIA DE REPOSITORIOS:
+1. REPO "APP-VENTAS": Código fuente + YAMLs propios + CI/CD propio.
+2. REPO "APP-SAAS": Código fuente + YAMLs propios + CI/CD propio.
+3. REPO "INFRAESTRUCTURA": Ingress Global + Configuración general.
+
+================================================================================
+SECCIÓN 1: CONFIGURACIÓN DE REPOSITORIOS DE APLICACIÓN (App 1 y App 2)
+================================================================================
+Esta estructura se repite para AMBOS repositorios (Ventas y SaaS).
+Solo debes cambiar los nombres (ej: ventas-app por saas-app).
+
+A. ESTRUCTURA DE CARPETAS
+-------------------------
+mi-repo-app/
+├── src/
+│   ├── manage.py
+│   ├── mysite/
+│   │   └── settings.py  <-- IMPORTANTE: Configura STATIC_ROOT = '/app/static_final'
+│   └── ...
+├── Dockerfile
+├── .github/
+│   └── workflows/
+│       ├── 1-construir-imagen.yaml  (Automático)
+│       └── 2-desplegar-nas.yaml     (Manual)
+└── k8s/
+    ├── 01-configmap-nginx.yaml
+    ├── 02-deployment.yaml
+    └── 03-service.yaml
+
+
+B. MANIFIESTOS KUBERNETES (Carpeta /k8s)
+----------------------------------------
+
+--- ARCHIVO: k8s/01-configmap-nginx.yaml ---
+# Este archivo configura el Nginx que vive DENTRO del pod junto a Django.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-nginx-conf  # CAMBIAR NOMBRE POR APP (ej: ventas-nginx-conf)
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name localhost;
+
+        # 1. Servir estáticos: Nginx lee del volumen compartido
+        location /static/ {
+            alias /volumen_compartido/static/;
+            expires 30d;
+        }
+
+        # 2. Todo lo demás: Se lo pasa a Django (localhost:8000)
+        location / {
+            proxy_pass http://127.0.0.1:8000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }
+
+--- ARCHIVO: k8s/02-deployment.yaml ---
+# Define cómo se ejecutan los contenedores
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-deployment # CAMBIAR POR APP (ej: ventas-app)
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mi-app-label # CAMBIAR POR APP (ej: ventas)
+  template:
+    metadata:
+      labels:
+        app: mi-app-label # CAMBIAR POR APP (ej: ventas)
+    spec:
+      # Definición de volúmenes (Discos virtuales)
+      volumes:
+        - name: shared-static-vol
+          emptyDir: {}  # Disco temporal compartido entre contenedores
+        - name: nginx-conf-vol
+          configMap:
+            name: app-nginx-conf # DEBE COINCIDIR CON EL CONFIGMAP ARRIBA
+
+      containers:
+        # --- CONTENEDOR 1: DJANGO ---
+        - name: django-container
+          image: ghcr.io/TU_USUARIO/tu-repo:latest # CAMBIAR POR TU IMAGEN
+          # COMANDO VITAL: Recolecta estáticos al iniciar y lanza Gunicorn
+          command: ["/bin/sh", "-c", "python manage.py collectstatic --noinput && gunicorn mysite.wsgi:application --bind 0.0.0.0:8000 --timeout 120"]
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DB_NAME
+              value: software_venta
+            - name: DB_HOST
+              valueFrom: { secretKeyRef: { name: db-credentials-saas, key: host } }
+            - name: DB_PORT
+              valueFrom: { secretKeyRef: { name: db-credentials-saas, key: port } }
+            - name: DB_USER
+              valueFrom: { secretKeyRef: { name: db-credentials-saas, key: user } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: db-credentials-saas, key: password } }
+          volumeMounts:
+            - name: shared-static-vol
+              mountPath: /app/static_final # DEBE COINCIDIR CON STATIC_ROOT EN DJANGO
+
+        # --- CONTENEDOR 2: NGINX (SIDECAR) ---
+        - name: nginx-sidecar
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: shared-static-vol
+              mountPath: /volumen_compartido/static # DEBE COINCIDIR CON ALIAS EN NGINX CONF
+            - name: nginx-conf-vol
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+
+--- ARCHIVO: k8s/03-service.yaml ---
+# Crea una IP interna estable para la app
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-service # CAMBIAR POR APP (ej: ventas-service)
+spec:
+  selector:
+    app: mi-app-label # DEBE COINCIDIR CON EL LABEL DEL DEPLOYMENT
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80 # Apunta al NGINX (Sidecar), NO al Django
+
+
+C. AUTOMATIZACIÓN GITHUB ACTIONS (.github/workflows/)
+-----------------------------------------------------
+
+--- ARCHIVO: 1-construir-imagen.yaml ---
+# Se ejecuta automáticamente al crear un Tag
+name: 1. Construir Docker Image (CI)
+on:
+  push:
+    tags: [ 'v*' ]
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+
+--- ARCHIVO: 2-desplegar-nas.yaml ---
+# Se ejecuta MANUALMENTE con un botón
+name: 2. Desplegar en NAS (CD)
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Tag a desplegar (ej: v1.0)'
+        required: true
+        default: 'latest'
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+jobs:
+  deploy-to-nas:
+    runs-on: self-hosted  # <--- ESTO BUSCA TU NAS
+    steps:
+      - uses: actions/checkout@v4
+      - name: Actualizar K8s
+        run: |
+          kubectl apply -f k8s/
+          # CAMBIAR 'app-deployment' Y 'django-container' POR LOS NOMBRES REALES DE TU YAML
+          kubectl set image deployment/app-deployment django-container=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}
+          kubectl rollout status deployment/app-deployment
+
+
+================================================================================
+SECCIÓN 2: REPOSITORIO DE INFRAESTRUCTURA (Repo 3)
+================================================================================
+Este repo no tiene código Python, solo configuración de red global.
+
+A. ARCHIVO: ingress-global.yaml
+-------------------------------
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-global
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+    # --- REGLA PARA VENTAS ---
+    - host: ventas.midominio.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ventas-service # Nombre definido en k8s/03-service.yaml del Repo 1
+                port:
+                  number: 80
+
+    # --- REGLA PARA SAAS (SISTEMA) ---
+    - host: sistema.midominio.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: saas-service # Nombre definido en k8s/03-service.yaml del Repo 2
+                port:
+                  number: 80
+
+
+================================================================================
+SECCIÓN 3: PASOS DE IMPLEMENTACIÓN (Checklist)
+================================================================================
+
+1. PREPARAR EL NAS:
+   [ ] Instalar Kubernetes (k3s o MicroK8s).
+   [ ] Instalar Ingress Controller (si usas k3s viene con Traefik, desactívalo si quieres Nginx puro, o adapta el Ingress class).
+
+2. CREAR SECRETOS (En el NAS una sola vez):
+   Ejecuta esto en la terminal para que las apps puedan leer la BD:
+   $ kubectl create secret generic db-credentials-saas \
+       --from-literal=host=192.168.1.122 \
+       --from-literal=port=5432 \
+       --from-literal=name=software_venta \
+       --from-literal=user=postgres \
+       --from-literal=password=max135
+
+3. CONFIGURAR GITHUB RUNNERS:
+   [ ] En Repo Ventas -> Settings -> Actions -> Runners -> New Self-Hosted (Instalar en NAS).
+   [ ] En Repo SaaS -> Settings -> Actions -> Runners -> New Self-Hosted (Instalar en NAS).
+
+4. DESPLIEGUE INICIAL:
+   [ ] Push de código a los repositorios (crear Tag v1.0).
+   [ ] Aplicar infraestructura global: `kubectl apply -f ingress-global.yaml` (manual o en repo infra).
+   [ ] Ir a GitHub Actions y ejecutar el flujo "2. Desplegar en NAS" para cada app.
+
+================================================================================
+FIN DE LA GUÍA
+================================================================================
