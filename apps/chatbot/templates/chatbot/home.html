@@ -547,6 +547,194 @@
     }
     .reasoning-toggle.active .toggle-label { color: var(--accent-purple); }
 
+    /* ══ TOOL DROPDOWN ══ */
+    .tool-dropdown-wrap {
+      position: relative;
+    }
+    .tool-dropdown-trigger {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: transparent; border: 1px solid var(--border);
+      border-radius: 20px; padding: 3px 9px 3px 7px;
+      cursor: pointer; user-select: none;
+      transition: border-color .15s, background .15s;
+      font-family: inherit; font-size: .71rem; font-weight: 600;
+      color: var(--text-secondary); white-space: nowrap;
+    }
+    .tool-dropdown-trigger:hover { border-color: var(--border-strong); background: var(--bg-hover); color: var(--text-primary); }
+    .tool-dropdown-trigger.has-tool { border-color: var(--accent-purple); color: var(--accent-purple); background: var(--accent-purple-bg); }
+    .tool-dropdown-trigger i { font-size: .85rem; }
+    .tool-dropdown-chevron { font-size: .75rem; transition: transform .18s; }
+    .tool-dropdown-trigger.open .tool-dropdown-chevron { transform: rotate(180deg); }
+
+    .tool-dropdown-menu {
+      position: absolute; bottom: calc(100% + 6px); left: 0;
+      min-width: 220px; z-index: 50;
+      background: var(--modal-bg); border: 1px solid var(--modal-border);
+      border-radius: 12px; padding: 5px;
+      box-shadow: 0 12px 36px rgba(0,0,0,.25);
+      opacity: 0; visibility: hidden; transform: translateY(6px);
+      transition: opacity .15s, visibility .15s, transform .15s;
+    }
+    .tool-dropdown-menu.open { opacity: 1; visibility: visible; transform: translateY(0); }
+    .tool-dropdown-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 10px; border-radius: 8px; border: none;
+      background: transparent; color: var(--text-secondary);
+      font-size: .8rem; font-weight: 500; cursor: pointer;
+      width: 100%; text-align: left; font-family: inherit;
+      transition: background .12s, color .12s;
+    }
+    .tool-dropdown-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .tool-dropdown-item.active { color: var(--accent-purple); background: var(--accent-purple-bg); }
+    .tool-dropdown-item-icon {
+      width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+      background: rgba(129,140,248,0.12); display: flex; align-items: center;
+      justify-content: center; color: var(--accent-purple); font-size: .9rem;
+    }
+    .tool-dropdown-item-info { flex: 1; min-width: 0; }
+    .tool-dropdown-item-label { font-weight: 700; font-size: .79rem; color: inherit; }
+    .tool-dropdown-item-desc { font-size: .67rem; color: var(--text-muted); margin-top: 1px; }
+    .tool-dropdown-none {
+      font-size: .77rem; color: var(--text-muted); padding: 6px 10px; font-style: italic;
+    }
+    .tool-dropdown-clear {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 10px; border-radius: 8px; border: none;
+      background: transparent; color: var(--text-muted);
+      font-size: .75rem; font-weight: 500; cursor: pointer;
+      width: 100%; text-align: left; font-family: inherit;
+      border-top: 1px solid var(--border); margin-top: 3px; padding-top: 9px;
+      transition: color .12s;
+    }
+    .tool-dropdown-clear:hover { color: #f87171; }
+
+    /* ══ TOOL CARD ══ */
+    .tool-card {
+      margin: 6px 0 10px;
+      border-radius: 12px;
+      border: 1px solid var(--accent-purple);
+      background: var(--accent-purple-bg);
+      overflow: hidden;
+      max-width: 540px;
+    }
+    .tool-card.loading { border-color: rgba(129,140,248,0.4); }
+    .tool-card-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 13px;
+      background: rgba(129,140,248,0.08);
+      border-bottom: 1px solid rgba(129,140,248,0.2);
+    }
+    .tool-card-icon {
+      width: 26px; height: 26px; border-radius: 7px;
+      background: rgba(129,140,248,0.18);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; color: var(--accent-purple); font-size: .95rem;
+    }
+    /* spinner que reemplaza el ícono mientras carga */
+    .tool-card-icon.spinning i { animation: tcSpin .7s linear infinite; display: block; }
+    @keyframes tcSpin { to { transform: rotate(360deg); } }
+    .tool-card-title {
+      font-size: .78rem; font-weight: 700;
+      color: var(--accent-purple); flex: 1; letter-spacing: .01em;
+    }
+    .tool-card-badge {
+      font-size: .62rem; font-weight: 700; padding: 2px 7px;
+      border-radius: 20px; background: rgba(129,140,248,0.2);
+      color: var(--accent-purple); text-transform: uppercase; letter-spacing: .06em;
+    }
+    .tool-card-badge.processing {
+      background: rgba(245,158,11,0.18); color: #f59e0b;
+      animation: tcPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes tcPulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+
+    /* barra de progreso animada en el loading */
+    .tool-card-progress {
+      height: 2px; background: rgba(129,140,248,0.15); overflow: hidden;
+    }
+    .tool-card-progress-bar {
+      height: 100%; width: 40%;
+      background: linear-gradient(90deg, transparent, var(--accent-purple), transparent);
+      animation: tcBar 1.3s ease-in-out infinite;
+    }
+    @keyframes tcBar { 0%{transform:translateX(-200%)} 100%{transform:translateX(600%)} }
+
+    .tool-card-body { padding: 10px 13px; }
+    .tool-card-section {
+      font-size: .68rem; font-weight: 700;
+      color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: .07em; margin-bottom: 5px; margin-top: 8px;
+    }
+    .tool-card-section:first-child { margin-top: 0; }
+    .tool-card-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 5px 10px;
+    }
+    .tool-card-row {
+      display: flex; flex-direction: column; gap: 1px;
+    }
+    .tool-card-key {
+      font-size: .68rem; color: var(--text-muted); font-weight: 500;
+    }
+    .tool-card-val {
+      display: flex; align-items: center; gap: 4px;
+      font-size: .8rem; color: var(--text-primary); font-weight: 600; word-break: break-word;
+    }
+    .tool-card-val.highlight { color: var(--accent-purple); }
+    .tool-card-val.ok   { color: var(--accent-green); }
+    .tool-card-val.warn { color: #f59e0b; }
+    .tc-copy-val {
+      opacity: 0; background: none; border: none; cursor: pointer;
+      color: var(--text-muted); padding: 0 2px; font-size: .72rem;
+      transition: color .12s, opacity .12s; line-height: 1; flex-shrink: 0;
+    }
+    .tool-card-row:hover .tc-copy-val { opacity: 1; }
+    .tc-copy-val:hover { color: var(--accent-purple); }
+    .tc-copy-val.done { color: var(--accent-green); opacity: 1; }
+
+    .tool-card-chips {
+      display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px;
+    }
+    .tool-chip {
+      font-size: .72rem; padding: 2px 8px; border-radius: 20px;
+      background: rgba(248,113,113,0.15); color: #f87171; font-weight: 600;
+    }
+    .tool-chip.none {
+      background: var(--accent-green-bg); color: var(--accent-green);
+    }
+
+    /* expand / chart */
+    .tool-card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 13px 8px; border-top: 1px solid rgba(129,140,248,0.15);
+      margin-top: 8px;
+    }
+    .tc-expand-btn, .tc-copy-all-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: none; border: none; cursor: pointer; font-family: inherit;
+      font-size: .72rem; font-weight: 600; color: var(--text-muted);
+      padding: 2px 6px; border-radius: 6px; transition: color .12s, background .12s;
+    }
+    .tc-expand-btn:hover, .tc-copy-all-btn:hover { color: var(--accent-purple); background: rgba(129,140,248,0.1); }
+    .tc-expand-btn i, .tc-copy-all-btn i { font-size: .85rem; }
+
+    .tool-card-chart-wrap {
+      display: none; padding: 8px 13px 12px;
+      border-top: 1px solid rgba(129,140,248,0.12);
+    }
+    .tool-card-chart-wrap.open { display: block; }
+    .tc-chart-canvas { width: 100%; height: 90px; display: block; }
+
+    /* shimmer skeleton en loading */
+    .tc-skeleton {
+      height: 10px; border-radius: 6px;
+      background: linear-gradient(90deg, rgba(129,140,248,0.08) 25%, rgba(129,140,248,0.18) 50%, rgba(129,140,248,0.08) 75%);
+      background-size: 200% 100%;
+      animation: tcShimmer 1.4s infinite;
+      margin-bottom: 6px;
+    }
+    .tc-skeleton:last-child { margin-bottom: 0; width: 60%; }
+    @keyframes tcShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
     /* ══ SIDEBAR OVERLAY (mobile) ══ */
     .sidebar-overlay {
       display: none;
@@ -710,11 +898,23 @@
     <div class="input-box">
       <div class="input-inner">
         <textarea id="chat-input" class="chat-input" placeholder="Preguntá sobre series temporales, ACF/PACF, modelos ARIMA…" rows="1" autocomplete="off"></textarea>
-        <div class="input-bottom-row">
+        <div class="input-bottom-row" style="gap:7px">
           <button id="reasoning-toggle" class="reasoning-toggle{% if current_model == 'deepseek-reasoner' %} active{% endif %}" title="Activar modo razonamiento">
             <div class="toggle-switch"><div class="toggle-knob"></div></div>
             <span class="toggle-label">Razonamiento</span>
           </button>
+
+          <!-- Tool dropdown -->
+          <div class="tool-dropdown-wrap" id="tool-dropdown-wrap">
+            <button class="tool-dropdown-trigger" id="tool-dropdown-trigger" type="button">
+              <i class='bx bx-wrench'></i>
+              <span id="tool-trigger-label">Herramientas</span>
+              <i class='bx bx-chevron-up tool-dropdown-chevron'></i>
+            </button>
+            <div class="tool-dropdown-menu" id="tool-dropdown-menu">
+              <!-- poblado por JS -->
+            </div>
+          </div>
         </div>
       </div>
       <button id="send-btn" class="send-btn" disabled>
@@ -1175,6 +1375,342 @@
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!sendBtn.disabled) sendBtn.click(); }
   });
 
+  // ══ HERRAMIENTAS ══
+  let activeTool = null;
+  let toolsMeta  = {};
+
+  const toolDropdownWrap    = document.getElementById('tool-dropdown-wrap');
+  const toolDropdownTrigger = document.getElementById('tool-dropdown-trigger');
+  const toolDropdownMenu    = document.getElementById('tool-dropdown-menu');
+  const toolTriggerLabel    = document.getElementById('tool-trigger-label');
+
+  // ── Cargar herramientas desde el servidor ──
+  async function loadTools() {
+    try {
+      const res = await fetch("{% url 'herramientas_list' %}");
+      if (!res.ok) return;
+      const data = await res.json();
+      toolsMeta = data.tools || {};
+      renderDropdownMenu();
+    } catch { /* silencioso */ }
+  }
+
+  function renderDropdownMenu() {
+    toolDropdownMenu.innerHTML = '';
+    const keys = Object.keys(toolsMeta);
+    if (!keys.length) {
+      toolDropdownMenu.innerHTML = '<div class="tool-dropdown-none">Sin herramientas disponibles</div>';
+      return;
+    }
+    keys.forEach(name => {
+      const meta = toolsMeta[name];
+      const btn = document.createElement('button');
+      btn.className = 'tool-dropdown-item' + (activeTool === name ? ' active' : '');
+      btn.type = 'button';
+      btn.innerHTML = `
+        <div class="tool-dropdown-item-icon"><i class='bx ${meta.icon}'></i></div>
+        <div class="tool-dropdown-item-info">
+          <div class="tool-dropdown-item-label">${esc(meta.label)}</div>
+          <div class="tool-dropdown-item-desc">${esc(meta.description)}</div>
+        </div>`;
+      btn.addEventListener('click', () => { selectTool(name); closeDropdown(); });
+      toolDropdownMenu.appendChild(btn);
+    });
+    // Opción limpiar (si hay algo activo)
+    if (activeTool) {
+      const clr = document.createElement('button');
+      clr.className = 'tool-dropdown-clear';
+      clr.type = 'button';
+      clr.innerHTML = `<i class='bx bx-x'></i> Quitar herramienta`;
+      clr.addEventListener('click', () => { selectTool(null); closeDropdown(); });
+      toolDropdownMenu.appendChild(clr);
+    }
+  }
+
+  function openDropdown() {
+    toolDropdownMenu.classList.add('open');
+    toolDropdownTrigger.classList.add('open');
+  }
+  function closeDropdown() {
+    toolDropdownMenu.classList.remove('open');
+    toolDropdownTrigger.classList.remove('open');
+  }
+  function toggleDropdown() {
+    toolDropdownMenu.classList.contains('open') ? closeDropdown() : openDropdown();
+  }
+
+  toolDropdownTrigger.addEventListener('click', e => { e.stopPropagation(); toggleDropdown(); });
+  document.addEventListener('click', e => {
+    if (!toolDropdownWrap.contains(e.target)) closeDropdown();
+  });
+
+  function selectTool(name) {
+    activeTool = name;
+    renderDropdownMenu();
+    if (name) {
+      const meta = toolsMeta[name];
+      toolDropdownTrigger.classList.add('has-tool');
+      toolTriggerLabel.textContent = meta.label;
+      chatInput.placeholder = `Describí los datos para "${meta.label}"…`;
+    } else {
+      toolDropdownTrigger.classList.remove('has-tool');
+      toolTriggerLabel.textContent = 'Herramientas';
+      chatInput.placeholder = 'Preguntá sobre series temporales, ACF/PACF, modelos ARIMA…';
+    }
+  }
+
+  // ── Tool Card: estado loading (se inyecta antes de la respuesta) ──
+  function injectToolCardLoading(toolName) {
+    const meta = toolsMeta[toolName] || {};
+    const label = meta.label || toolName;
+    const icon  = meta.icon  || 'bx-wrench';
+    const div = document.createElement('div');
+    div.className = 'tool-card loading';
+    div.id = 'tc-loading-' + toolName.replace(/\W/g,'_');
+    div.innerHTML = `
+      <div class="tool-card-header">
+        <div class="tool-card-icon spinning"><i class='bx bx-loader-alt'></i></div>
+        <span class="tool-card-title">${esc(label)}</span>
+        <span class="tool-card-badge processing">Procesando…</span>
+      </div>
+      <div class="tool-card-progress"><div class="tool-card-progress-bar"></div></div>
+      <div class="tool-card-body">
+        <div class="tc-skeleton" style="width:80%"></div>
+        <div class="tc-skeleton" style="width:60%"></div>
+        <div class="tc-skeleton" style="width:70%"></div>
+      </div>`;
+    return div;
+  }
+
+  // ── Tool Card: resultado completo ──
+  function buildToolCardEl(toolResult) {
+    const meta  = toolsMeta[toolResult.tool_name] || {};
+    const label = meta.label || toolResult.tool_name;
+    const icon  = meta.icon  || 'bx-wrench';
+    const out   = toolResult.output || {};
+
+    const el = document.createElement('div');
+    el.className = 'tool-card';
+
+    if (out.error) {
+      el.innerHTML = `
+        <div class="tool-card-header">
+          <div class="tool-card-icon"><i class='bx ${icon}'></i></div>
+          <span class="tool-card-title">${esc(label)}</span>
+          <span class="tool-card-badge" style="background:rgba(248,113,113,.18);color:#f87171">Error</span>
+        </div>
+        <div class="tool-card-body">
+          <span style="color:#f87171;font-size:.82rem">${esc(out.error)}</span>
+        </div>`;
+      return el;
+    }
+
+    const LABELS = {
+      nombre_serie:       'Serie',
+      periodo:            'Período',
+      n_observaciones:    'Observaciones',
+      media:              'Media',
+      mediana:            'Mediana',
+      desv_estandar:      'Desv. estándar',
+      minimo:             'Mínimo',
+      maximo:             'Máximo',
+      rango:              'Rango',
+      coef_variacion_pct: 'CV (%)',
+      tendencia:          'Tendencia',
+    };
+
+    // Construir filas con botón copiar
+    let gridHTML = '';
+    for (const [key, friendlyLabel] of Object.entries(LABELS)) {
+      if (out[key] === undefined || out[key] === null) continue;
+      const val = String(out[key]);
+      const isHL = key === 'tendencia';
+      gridHTML += `<div class="tool-card-row">
+        <span class="tool-card-key">${friendlyLabel}</span>
+        <span class="tool-card-val ${isHL ? 'highlight' : ''}">
+          <span>${esc(val)}</span>
+          <button class="tc-copy-val" title="Copiar" data-copy="${esc(val)}" onclick="tcCopyVal(this)">
+            <i class='bx bx-copy'></i>
+          </button>
+        </span>
+      </div>`;
+    }
+
+    // Outliers
+    const outliers = out.outliers_potenciales || [];
+    const outliersHTML = outliers.length === 0
+      ? `<span class="tool-chip none">Sin outliers detectados</span>`
+      : outliers.map(v => `<span class="tool-chip">${v}</span>`).join('');
+
+    // JSON completo para copiar todo
+    const jsonAll = JSON.stringify(out, null, 2);
+    const jsonEsc = esc(jsonAll);
+
+    el.innerHTML = `
+      <div class="tool-card-header">
+        <div class="tool-card-icon"><i class='bx ${icon}'></i></div>
+        <span class="tool-card-title">${esc(label)}</span>
+        <span class="tool-card-badge">Resultado</span>
+      </div>
+      <div class="tool-card-body">
+        <div class="tool-card-section">Estadísticas</div>
+        <div class="tool-card-grid">${gridHTML}</div>
+        <div class="tool-card-section" style="margin-top:10px">Outliers potenciales (&gt;2σ)</div>
+        <div class="tool-card-chips">${outliersHTML}</div>
+      </div>
+      <div class="tool-card-footer">
+        <button class="tc-expand-btn" onclick="tcToggleChart(this)" data-open="0">
+          <i class='bx bx-line-chart'></i> Ver gráfico
+        </button>
+        <button class="tc-copy-all-btn" title="Copiar resultados como JSON" onclick="tcCopyAll(this,'${jsonEsc.replace(/'/g,"\\'")}')">
+          <i class='bx bx-copy'></i> Copiar todo
+        </button>
+      </div>
+      <div class="tool-card-chart-wrap" id="tc-chart-${Date.now()}">
+        <canvas class="tc-chart-canvas" height="90"></canvas>
+      </div>`;
+
+    // Renderizar gráfico cuando se expanda
+    el._chartData = out;
+    return el;
+  }
+
+  // ── Copiar valor individual ──
+  function tcCopyVal(btn) {
+    const val = btn.dataset.copy || '';
+    navigator.clipboard.writeText(val).then(() => {
+      btn.classList.add('done');
+      btn.innerHTML = `<i class='bx bx-check'></i>`;
+      setTimeout(() => { btn.classList.remove('done'); btn.innerHTML = `<i class='bx bx-copy'></i>`; }, 1800);
+    });
+  }
+
+  // ── Copiar todo el JSON ──
+  function tcCopyAll(btn, jsonEscaped) {
+    // Revertir escape de entidades HTML básicas
+    const raw = jsonEscaped
+      .replace(/&amp;/g,'&').replace(/&lt;/g,'<')
+      .replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+    navigator.clipboard.writeText(raw).then(() => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = `<i class='bx bx-check'></i> Copiado`;
+      btn.style.color = 'var(--accent-green)';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+    });
+  }
+
+  // ── Toggle gráfico ──
+  function tcToggleChart(btn) {
+    const card = btn.closest('.tool-card');
+    const wrap = card.querySelector('.tool-card-chart-wrap');
+    const isOpen = btn.dataset.open === '1';
+    if (isOpen) {
+      wrap.classList.remove('open');
+      btn.dataset.open = '0';
+      btn.innerHTML = `<i class='bx bx-line-chart'></i> Ver gráfico`;
+    } else {
+      wrap.classList.add('open');
+      btn.dataset.open = '1';
+      btn.innerHTML = `<i class='bx bx-chevron-up'></i> Ocultar gráfico`;
+      if (!wrap.dataset.rendered) {
+        wrap.dataset.rendered = '1';
+        drawMiniChart(wrap.querySelector('canvas'), card._chartData);
+      }
+    }
+  }
+
+  // ── Gráfico mini con canvas (sin librerías externas) ──
+  function drawMiniChart(canvas, out) {
+    if (!canvas || !out) return;
+    // Usar los valores originales si los tiene el out, si no, gráfico de barras de stats
+    const stats = [
+      { label: 'Min',    val: out.minimo },
+      { label: 'Media',  val: out.media },
+      { label: 'Mediana',val: out.mediana },
+      { label: 'Max',    val: out.maximo },
+    ].filter(s => s.val !== undefined && s.val !== null);
+
+    if (!stats.length) return;
+
+    const dpr    = window.devicePixelRatio || 1;
+    const W      = canvas.offsetWidth  || 480;
+    const H      = 90;
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    // Colores según tema
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const barColor   = 'rgba(129,140,248,0.7)';
+    const lineColor  = '#818cf8';
+    const textColor  = isDark ? '#888' : '#999';
+    const gridColor  = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+
+    const padL = 42, padR = 10, padT = 10, padB = 24;
+    const cW = W - padL - padR;
+    const cH = H - padT - padB;
+
+    const vals = stats.map(s => s.val);
+    const minV = Math.min(...vals);
+    const maxV = Math.max(...vals);
+    const span = maxV - minV || 1;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Grid lines
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 1;
+    [0, 0.5, 1].forEach(t => {
+      const y = padT + cH * (1 - t);
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + cW, y); ctx.stroke();
+    });
+
+    // Barras
+    const bW = Math.max(4, cW / stats.length * 0.55);
+    const gap = cW / stats.length;
+    stats.forEach((s, i) => {
+      const x = padL + gap * i + gap / 2 - bW / 2;
+      const norm = (s.val - minV) / span;
+      const bH = Math.max(2, cH * norm);
+      const y = padT + cH - bH;
+
+      // Barra con gradiente
+      const grad = ctx.createLinearGradient(0, y, 0, y + bH);
+      grad.addColorStop(0, 'rgba(129,140,248,0.85)');
+      grad.addColorStop(1, 'rgba(99,102,241,0.3)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(x, y, bW, bH, [3, 3, 0, 0]) : ctx.rect(x, y, bW, bH);
+      ctx.fill();
+
+      // Valor encima
+      ctx.fillStyle = lineColor;
+      ctx.font = `600 ${Math.min(9, bW * 0.9)}px Inter,sans-serif`;
+      ctx.textAlign = 'center';
+      const vLabel = Math.abs(s.val) >= 1000 ? s.val.toFixed(0) : s.val.toFixed(2);
+      ctx.fillText(vLabel, x + bW / 2, y - 2);
+
+      // Label abajo
+      ctx.fillStyle = textColor;
+      ctx.font = `500 9px Inter,sans-serif`;
+      ctx.fillText(s.label, x + bW / 2, H - 7);
+    });
+
+    // Eje Y labels (min / max)
+    ctx.fillStyle = textColor;
+    ctx.font = '500 8.5px Inter,sans-serif';
+    ctx.textAlign = 'right';
+    const fmtAxis = v => Math.abs(v) >= 1000 ? v.toFixed(0) : v.toFixed(2);
+    ctx.fillText(fmtAxis(maxV), padL - 3, padT + 4);
+    ctx.fillText(fmtAxis(minV), padL - 3, padT + cH);
+  }
+
+  loadTools();
+
   sendBtn.addEventListener('click', async () => {
     const text = chatInput.value.trim();
     if (!text) return;
@@ -1184,21 +1720,58 @@
     setSendActive(false);
     addUser(text);
     const aiEl = addAI('', true);
+
+    // Capturar herramienta activa y deseleccionar
+    const usedTool = activeTool;
+    if (activeTool) selectTool(null);
+
+    // Si hay herramienta seleccionada: inyectar card loading en el bubble de la IA
+    let loadingCardEl = null;
+    if (usedTool) {
+      loadingCardEl = injectToolCardLoading(usedTool);
+      aiEl.innerHTML = '';
+      aiEl.appendChild(loadingCardEl);
+      scrollEnd();
+    }
+
     try {
-      const res  = await fetch("{% url 'chat_api' %}", {
+      const body = { message: text };
+      if (usedTool) body.suggested_tool = usedTool;
+
+      const res = await fetch("{% url 'chat_api' %}", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify(body),
       });
       let data;
       try { data = await res.json(); } catch { data = {}; }
+
       if (!res.ok) {
         const detail = data.error || data.detail || JSON.stringify(data) || '(sin detalle)';
         aiEl.innerHTML = `<span style="color:#f87171"><strong>Error HTTP ${res.status}${res.statusText ? ' ' + res.statusText : ''}</strong><br>${esc(detail)}</span>`;
+      } else if (data.error) {
+        aiEl.innerHTML = `<span style="color:#f87171"><strong>Error del servidor:</strong><br>${esc(data.error)}</span>`;
       } else {
-        aiEl.innerHTML = data.error
-          ? `<span style="color:#f87171"><strong>Error del servidor:</strong><br>${esc(data.error)}</span>`
-          : renderMD(data.response || 'Sin respuesta.');
+        aiEl.innerHTML = '';
+
+        // Si la IA usó herramienta → reemplazar loading card con resultado real
+        if (data.tool_result) {
+          const resultEl = buildToolCardEl(data.tool_result);
+          // Animación de entrada
+          resultEl.style.opacity = '0';
+          resultEl.style.transform = 'translateY(8px)';
+          resultEl.style.transition = 'opacity .25s, transform .25s';
+          aiEl.appendChild(resultEl);
+          requestAnimationFrame(() => {
+            resultEl.style.opacity = '1';
+            resultEl.style.transform = 'translateY(0)';
+          });
+        }
+
+        // Respuesta de texto del asistente
+        const textDiv = document.createElement('div');
+        textDiv.innerHTML = renderMD(data.response || 'Sin respuesta.');
+        aiEl.appendChild(textDiv);
       }
     } catch (err) {
       aiEl.innerHTML = `<span style="color:#f87171"><strong>No se pudo conectar con el servidor.</strong><br>${esc(String(err))}</span>`;
