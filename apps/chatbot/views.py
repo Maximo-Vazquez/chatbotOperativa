@@ -9,6 +9,8 @@ from django.views.decorators.http import require_POST
 from openai import OpenAI
 
 from .models import UserAPIKey
+from apps.herramientas.tools import TOOL_DEFINITIONS, ejecutar_herramienta
+from apps.herramientas.models import ToolCall
 
 MAX_HISTORY_ITEMS = 12
 
@@ -43,7 +45,6 @@ def _clean_history(raw_history):
 
 
 def _get_user_api_key(user, provider_key):
-    """Devuelve la API key guardada en DB para el usuario y proveedor."""
     try:
         return UserAPIKey.objects.get(user=user, provider=provider_key).api_key.strip()
     except UserAPIKey.DoesNotExist:
@@ -51,10 +52,6 @@ def _get_user_api_key(user, provider_key):
 
 
 def _get_chat_config(request):
-    """
-    Devuelve (provider_key, provider, model, api_key) según sesión + DB del usuario.
-    La clave se busca primero en DB (por usuario), luego en settings de entorno.
-    """
     provider_key = request.session.get("chat_provider", "deepseek")
     if provider_key not in PROVIDERS:
         provider_key = "deepseek"
@@ -65,7 +62,6 @@ def _get_chat_config(request):
     if model not in provider["models"]:
         model = default_model
 
-    # Clave: primero DB (por usuario), luego settings de entorno
     api_key = _get_user_api_key(request.user, provider_key)
     if not api_key:
         api_key = getattr(settings, provider["key_setting"], "").strip()
@@ -86,6 +82,13 @@ def chat_home(request):
         "providers": {k: {"label": v["label"], "models": v["models"]} for k, v in PROVIDERS.items()},
         "has_api_key": bool(api_key),
     })
+
+
+def _model_supports_tools(provider_key, model):
+    """DeepSeek Reasoner no soporta tool calling."""
+    if provider_key == "deepseek" and model == "deepseek-reasoner":
+        return False
+    return True
 
 
 @csrf_exempt
@@ -113,12 +116,24 @@ def chat_api(request):
     if not user_message:
         return JsonResponse({"error": "El mensaje no puede estar vacío."}, status=400)
 
+    # Herramienta sugerida desde el frontend (opcional)
+    suggested_tool = (payload.get("suggested_tool") or "").strip()
+
     history = _clean_history(request.session.get("chat_history", []))
     messages = [{"role": "system", "content": settings.CHATBOT_SYSTEM_PROMPT}]
     for item in history:
         messages.append({"role": "user", "content": item["user"]})
         messages.append({"role": "assistant", "content": item["assistant"]})
-    messages.append({"role": "user", "content": user_message})
+
+    # Si hay herramienta sugerida, agregar hint en el mensaje del usuario
+    final_user_message = user_message
+    if suggested_tool:
+        final_user_message = (
+            f"{user_message}\n\n"
+            f"[Sugerencia del usuario: por favor usá la herramienta '{suggested_tool}' para responder.]"
+        )
+
+    messages.append({"role": "user", "content": final_user_message})
 
     try:
         client_kwargs = {"api_key": api_key}
@@ -126,12 +141,72 @@ def chat_api(request):
             client_kwargs["base_url"] = provider["base_url"]
 
         client = OpenAI(**client_kwargs)
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=0.4,
-        )
-        assistant_message = (response.choices[0].message.content or "").strip()
+        supports_tools = _model_supports_tools(provider_key, model)
+
+        call_kwargs = {
+            "model": model,
+            "messages": messages,
+            "temperature": 0.4,
+        }
+        if supports_tools:
+            call_kwargs["tools"] = TOOL_DEFINITIONS
+            call_kwargs["tool_choice"] = "auto"
+
+        response = client.chat.completions.create(**call_kwargs)
+        choice = response.choices[0]
+
+        tool_result_data = None  # datos para el frontend si se usó herramienta
+
+        # ── Ciclo tool use ──
+        if supports_tools and choice.finish_reason == "tool_calls":
+            tool_calls = choice.message.tool_calls
+
+            # Agregar el mensaje del asistente con las tool_calls
+            messages.append(choice.message)
+
+            tool_results_for_history = []
+            for tc in tool_calls:
+                fn_name = tc.function.name
+                try:
+                    fn_args = json.loads(tc.function.arguments)
+                except json.JSONDecodeError:
+                    fn_args = {}
+
+                result = ejecutar_herramienta(fn_name, fn_args)
+
+                # Guardar en DB
+                ToolCall.objects.create(
+                    user=request.user,
+                    tool_name=fn_name,
+                    input_data=fn_args,
+                    output_data=result,
+                )
+
+                # Acumular para la respuesta al frontend
+                tool_result_data = {
+                    "tool_name": fn_name,
+                    "input": fn_args,
+                    "output": result,
+                }
+                tool_results_for_history.append(tool_result_data)
+
+                # Agregar resultado de la herramienta a los mensajes
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": json.dumps(result, ensure_ascii=False),
+                })
+
+            # Segunda llamada: el modelo interpreta los resultados
+            response2 = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=0.4,
+            )
+            assistant_message = (response2.choices[0].message.content or "").strip()
+        else:
+            assistant_message = (choice.message.content or "").strip()
+
     except Exception as exc:
         return JsonResponse({"error": f"Error al consultar {provider['label']}: {exc}"}, status=502)
 
@@ -141,7 +216,11 @@ def chat_api(request):
     history.append({"user": user_message, "assistant": assistant_message})
     request.session["chat_history"] = history[-MAX_HISTORY_ITEMS:]
 
-    return JsonResponse({"response": assistant_message})
+    response_payload = {"response": assistant_message}
+    if tool_result_data:
+        response_payload["tool_result"] = tool_result_data
+
+    return JsonResponse(response_payload)
 
 
 @csrf_exempt
@@ -156,7 +235,6 @@ def reset_chat(request):
 @login_required
 @require_POST
 def save_config(request):
-    """Guarda proveedor, modelo y API key. La clave se persiste en DB por usuario."""
     try:
         payload = json.loads(request.body.decode("utf-8") or "{}")
     except json.JSONDecodeError:
@@ -176,7 +254,6 @@ def save_config(request):
     request.session["chat_provider"] = provider_key
     request.session["chat_model"] = model or provider["models"][0]
 
-    # Persistir API key en DB por usuario (upsert)
     if api_key:
         UserAPIKey.objects.update_or_create(
             user=request.user,
@@ -184,7 +261,6 @@ def save_config(request):
             defaults={"api_key": api_key},
         )
 
-    # Limpiar historial al cambiar proveedor/modelo
     request.session["chat_history"] = []
 
     has_key = bool(

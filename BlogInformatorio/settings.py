@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "django.contrib.sites",
     "apps.login",
     "apps.chatbot",
+    "apps.herramientas",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
