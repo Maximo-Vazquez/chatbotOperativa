@@ -55,7 +55,7 @@ MIDDLEWARE = [
     "allauth.account.middleware.AccountMiddleware",
 ]
 
-ROOT_URLCONF = "BlogInformatorio.urls"
+ROOT_URLCONF = "main.urls"
 
 TEMPLATES = [
     {
@@ -75,7 +75,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "BlogInformatorio.wsgi.application"
+WSGI_APPLICATION = "main.wsgi.application"
 
 DB_ENGINE = os.environ.get("DB_ENGINE", "django.db.backends.sqlite3").strip()
 if DB_ENGINE == "django.db.backends.sqlite3":

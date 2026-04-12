@@ -1,11 +1,11 @@
-"""Configuración de Celery para el proyecto BlogInformatorio."""
+"""Configuración de Celery para el proyecto main."""
 import os
 from celery import Celery
 
 # Establece el módulo de settings de Django para el programa 'celery'.
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "BlogInformatorio.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "main.settings")
 
-app = Celery("BlogInformatorio")
+app = Celery("main")
 
 # Usa la configuración de Django. El namespace 'CELERY' significa que todas
 # las claves de configuración de Celery deben tener ese prefijo.
