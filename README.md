@@ -48,7 +48,7 @@ Acceder a `http://localhost:8000`
 
 ```
 TiendaSoftware/
-├── BlogInformatorio/     # Configuración principal de Django
+├── main/                 # Configuración principal de Django
 ├── apps/                 # Módulos de la aplicación
 │   ├── administracion/   # Usuarios, productos, pedidos, facturas
 │   ├── chatbot/          # Asistente con OpenAI

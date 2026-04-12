@@ -31,7 +31,7 @@ spec:
           command: ["python", "manage.py", "migrate", "--noinput"]
           env:
             - name: DJANGO_SETTINGS_MODULE
-              value: BlogInformatorio.settings
+              value: main.settings
             - name: PYTHONUNBUFFERED
               value: "1"
             - name: DJANGO_DEBUG
@@ -88,12 +88,12 @@ spec:
           args:
             - |
               python manage.py collectstatic --noinput && \
-              gunicorn BlogInformatorio.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
+              gunicorn main.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
           ports:
             - containerPort: 8000
           env:
             - name: DJANGO_SETTINGS_MODULE
-              value: BlogInformatorio.settings
+              value: main.settings
             - name: PYTHONUNBUFFERED
               value: "1"
             - name: DJANGO_DEBUG
