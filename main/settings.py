@@ -189,5 +189,6 @@ CHATBOT_SYSTEM_PROMPT = os.environ.get(
 ).strip()
 
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+CLAVE_API_DEEPSEEK_INVITADO = "sk-3cf2677b04e4472ab3c5e0c6c6f5b100"
 DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat").strip() or "deepseek-chat"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"

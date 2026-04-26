@@ -1,9 +1,8 @@
 import json
 
 from django.conf import settings
-from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from openai import OpenAI
@@ -13,14 +12,9 @@ from apps.herramientas.tools import TOOL_DEFINITIONS, ejecutar_herramienta
 from apps.herramientas.models import ToolCall
 
 MAX_HISTORY_ITEMS = 12
+SESION_INVITADO = "es_invitado"
 
 PROVIDERS = {
-    "openai": {
-        "label": "OpenAI",
-        "models": ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
-        "base_url": None,
-        "key_setting": "OPENAI_API_KEY",
-    },
     "deepseek": {
         "label": "DeepSeek",
         "models": ["deepseek-chat", "deepseek-reasoner"],
@@ -28,6 +22,23 @@ PROVIDERS = {
         "key_setting": "DEEPSEEK_API_KEY",
     },
 }
+
+
+def _es_solicitud_invitada(request):
+    return bool(request.session.get(SESION_INVITADO)) and not request.user.is_authenticated
+
+
+def _tiene_acceso_chat(request):
+    return request.user.is_authenticated or _es_solicitud_invitada(request)
+
+
+def requiere_acceso_chat(view_func):
+    def wrapper(request, *args, **kwargs):
+        if not _tiene_acceso_chat(request):
+            return redirect("login")
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
 
 
 def _clean_history(raw_history):
@@ -45,6 +56,8 @@ def _clean_history(raw_history):
 
 
 def _get_user_api_key(user, provider_key):
+    if not user.is_authenticated:
+        return ""
     try:
         return UserAPIKey.objects.get(user=user, provider=provider_key).api_key.strip()
     except UserAPIKey.DoesNotExist:
@@ -62,14 +75,17 @@ def _get_chat_config(request):
     if model not in provider["models"]:
         model = default_model
 
-    api_key = _get_user_api_key(request.user, provider_key)
+    if _es_solicitud_invitada(request):
+        api_key = settings.CLAVE_API_DEEPSEEK_INVITADO
+    else:
+        api_key = _get_user_api_key(request.user, provider_key)
     if not api_key:
         api_key = getattr(settings, provider["key_setting"], "").strip()
 
     return provider_key, provider, model, api_key
 
 
-@login_required
+@requiere_acceso_chat
 def chat_home(request):
     history = _clean_history(request.session.get("chat_history", []))
     provider_key, provider, model, api_key = _get_chat_config(request)
@@ -81,6 +97,8 @@ def chat_home(request):
         "current_model": model,
         "providers": {k: {"label": v["label"], "models": v["models"]} for k, v in PROVIDERS.items()},
         "has_api_key": bool(api_key),
+        "es_invitado": _es_solicitud_invitada(request),
+        "nombre_usuario": "Invitado" if _es_solicitud_invitada(request) else request.user.username,
     })
 
 
@@ -92,7 +110,7 @@ def _model_supports_tools(provider_key, model):
 
 
 @csrf_exempt
-@login_required
+@requiere_acceso_chat
 @require_POST
 def chat_api(request):
     provider_key, provider, model, api_key = _get_chat_config(request)
@@ -175,12 +193,13 @@ def chat_api(request):
                 result = ejecutar_herramienta(fn_name, fn_args)
 
                 # Guardar en DB
-                ToolCall.objects.create(
-                    user=request.user,
-                    tool_name=fn_name,
-                    input_data=fn_args,
-                    output_data=result,
-                )
+                if request.user.is_authenticated:
+                    ToolCall.objects.create(
+                        user=request.user,
+                        tool_name=fn_name,
+                        input_data=fn_args,
+                        output_data=result,
+                    )
 
                 # Acumular para la respuesta al frontend
                 tool_result_data = {
@@ -224,7 +243,7 @@ def chat_api(request):
 
 
 @csrf_exempt
-@login_required
+@requiere_acceso_chat
 @require_POST
 def reset_chat(request):
     request.session["chat_history"] = []
@@ -232,7 +251,7 @@ def reset_chat(request):
 
 
 @csrf_exempt
-@login_required
+@requiere_acceso_chat
 @require_POST
 def save_config(request):
     try:
@@ -254,7 +273,7 @@ def save_config(request):
     request.session["chat_provider"] = provider_key
     request.session["chat_model"] = model or provider["models"][0]
 
-    if api_key:
+    if api_key and request.user.is_authenticated:
         UserAPIKey.objects.update_or_create(
             user=request.user,
             provider=provider_key,
@@ -263,7 +282,7 @@ def save_config(request):
 
     request.session["chat_history"] = []
 
-    has_key = bool(
+    has_key = bool(settings.CLAVE_API_DEEPSEEK_INVITADO) if _es_solicitud_invitada(request) else bool(
         _get_user_api_key(request.user, provider_key) or
         getattr(settings, provider["key_setting"], "")
     )
