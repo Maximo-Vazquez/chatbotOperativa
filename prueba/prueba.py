@@ -1,25 +1,16 @@
-def secuencia_dos_unos(binario: int, contador: int) -> int:
-    if binario  == 0:
+from statsmodels.tsa.stattools import acf
 
-        if contador == 2:
-            return 1
-        else:
-            return 0
-    else:
-        digito = binario % 10
+# ENTRADAS
+datos = [
+    100, 102, 101, 103, 104, 106, 107, 109, 110, 112,
+    113, 115, 116, 118, 119, 121, 122, 124, 125, 127,
+] # Serie de tiempo con autocorrelacion positiva
+n_lags = 5 # Cuántos retardos analizar
 
-        if contador == 1:
-            if digito == 1:
-                return secuencia_dos_unos(binario // 10, 0) + 1
+# PROCESAMIENTO
+# 'nlags' es la entrada, 'alpha' genera los intervalos para la interpretación
+valores_acf, intervalos = acf(datos, nlags=n_lags, alpha=0.05)
 
-                
-        else:
-            if digito == 1:
-                return secuencia_dos_unos(binario // 10, 1)
-        return secuencia_dos_unos(binario // 10, 0)
-            
-
-
-print(secuencia_dos_unos(10110111101, 0))  # Ejemplo de uso
-
-
+# SALIDAS
+print("Coeficientes por cada lag:", valores_acf)
+print("Bandas de confianza:", intervalos)
