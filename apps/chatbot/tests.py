@@ -18,7 +18,7 @@ class ChatbotViewsTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
     @patch("apps.chatbot.views.OpenAI")
-    @patch("apps.chatbot.views.settings.OPENAI_API_KEY", "dummy-key")
+    @patch("apps.chatbot.views.settings.DEEPSEEK_API_KEY", "dummy-key")
     def test_chat_api_returns_response(self, mock_openai):
         self.client.force_login(self.user)
 
@@ -26,6 +26,7 @@ class ChatbotViewsTests(TestCase):
         mock_result = type("obj", (), {})()
         choice = type("obj", (), {})()
         choice.message = type("obj", (), {"content": "respuesta de prueba"})()
+        choice.finish_reason = "stop"
         mock_result.choices = [choice]
         mock_client.chat.completions.create.return_value = mock_result
 

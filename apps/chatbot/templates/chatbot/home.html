@@ -185,7 +185,6 @@
       transition: background .13s, color .13s; font-family: inherit; text-align: center;
     }
     .provider-tab.active { background: var(--select-bg); color: var(--text-primary); box-shadow: 0 1px 3px rgba(0,0,0,.18); }
-    .provider-tab[data-provider="openai"].active  { color: var(--accent-green); }
     .provider-tab[data-provider="deepseek"].active { color: var(--accent-purple); }
 
     .model-select, .api-key-field {
@@ -831,11 +830,11 @@
     <div class="user-chip">
       <div class="avatar">
         {% if google_profile_picture_url %}
-          <img src="{{ google_profile_picture_url }}" alt="{{ request.user.username }}">
-        {% else %}{{ request.user.username|first|upper }}{% endif %}
+          <img src="{{ google_profile_picture_url }}" alt="{{ nombre_usuario }}">
+        {% else %}{{ nombre_usuario|first|upper }}{% endif %}
       </div>
       <div>
-        <div class="user-name">{{ request.user.username }}</div>
+        <div class="user-name">{{ nombre_usuario }}</div>
         <div class="user-sub" id="sidebar-model-sub">{{ current_provider|upper }} · {{ current_model }}</div>
       </div>
     </div>
@@ -935,15 +934,8 @@
       </button>
     </div>
 
-    <div class="provider-tabs" style="margin-bottom:14px">
-      <button class="provider-tab {% if current_provider == 'openai' %}active{% endif %}"
-              data-provider="openai" onclick="selectProvider('openai')">OpenAI</button>
-      <button class="provider-tab {% if current_provider == 'deepseek' %}active{% endif %}"
-              data-provider="deepseek" onclick="selectProvider('deepseek')">DeepSeek</button>
-    </div>
-
     <div style="margin-bottom:14px">
-      <div style="font-size:.76rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px">Modelo</div>
+      <div style="font-size:.76rem;font-weight:600;color:var(--text-secondary);margin-bottom:6px">Modelo DeepSeek</div>
       <select class="model-select" id="model-select">
         {% for provider_key, provider_data in providers.items %}
           {% for m in provider_data.models %}
@@ -957,6 +949,7 @@
       </select>
     </div>
 
+    {% if not es_invitado %}
     <!-- Card: clave ya configurada -->
     <div id="apikey-card" class="apikey-card" {% if not has_api_key %}style="display:none"{% endif %}>
       <div class="apikey-card-icon"><i class='bx bxs-key'></i></div>
@@ -978,6 +971,19 @@
       <input type="password" class="api-key-field" id="api-key-field"
              placeholder="Pegá tu API key (sk-… o ds-…)" autocomplete="off" style="margin-bottom:14px">
     </div>
+
+    {% else %}
+    <div id="apikey-card" class="apikey-card">
+      <div class="apikey-card-icon"><i class='bx bxs-key'></i></div>
+      <div class="apikey-card-info">
+        <div class="apikey-card-label">Modo invitado</div>
+        <div class="apikey-card-hint">Se usa la clave DeepSeek configurada para invitados.</div>
+      </div>
+    </div>
+    <div id="apikey-input-wrap" class="apikey-input-wrap">
+      <input type="password" class="api-key-field" id="api-key-field" autocomplete="off" style="display:none">
+    </div>
+    {% endif %}
 
     <div class="config-feedback" id="config-feedback" style="margin-bottom:14px"></div>
 
@@ -1085,7 +1091,7 @@
 
   const REASONING_MODEL    = 'deepseek-reasoner';
   const REASONING_PROVIDER = 'deepseek';
-  const STANDARD_MODELS   = { openai: 'gpt-4o-mini', deepseek: 'deepseek-chat' };
+  const STANDARD_MODELS   = { deepseek: 'deepseek-chat' };
 
   let hasApiKey = HAS_API_KEY;
 
