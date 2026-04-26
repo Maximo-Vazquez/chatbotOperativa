@@ -35,7 +35,9 @@
       --send-bg: #e8e8e8;
       --send-color: #0d0d0d;
       --send-off: #333;
-      --scrollbar: #383838;
+      --scrollbar: #5a5a5a;
+      --scrollbar-hover: #7a7a7a;
+      --scrollbar-track: rgba(255,255,255,0.04);
       --topbar-bg: rgba(255,255,255,0.06);
       --topbar-hover: rgba(255,255,255,0.11);
       --topbar-border: rgba(255,255,255,0.07);
@@ -72,7 +74,9 @@
       --send-bg: #111;
       --send-color: #fff;
       --send-off: #d8d8d8;
-      --scrollbar: #ccc;
+      --scrollbar: #b0b0b0;
+      --scrollbar-hover: #888;
+      --scrollbar-track: rgba(0,0,0,0.04);
       --topbar-bg: rgba(0,0,0,0.04);
       --topbar-hover: rgba(0,0,0,0.08);
       --topbar-border: rgba(0,0,0,0.07);
@@ -253,9 +257,26 @@
     .chat-window {
       flex: 1; overflow-y: auto; scroll-behavior: smooth;
       padding: 0 0 12px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar) var(--scrollbar-track);
     }
-    .chat-window::-webkit-scrollbar { width: 4px; }
-    .chat-window::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+    .chat-window::-webkit-scrollbar { width: 12px; }
+    .chat-window::-webkit-scrollbar-track {
+      background: var(--scrollbar-track);
+      border-radius: 8px;
+    }
+    .chat-window::-webkit-scrollbar-thumb {
+      background: var(--scrollbar);
+      border-radius: 8px;
+      border: 3px solid transparent;
+      background-clip: padding-box;
+      min-height: 40px;
+    }
+    .chat-window::-webkit-scrollbar-thumb:hover {
+      background: var(--scrollbar-hover);
+      background-clip: padding-box;
+      border: 3px solid transparent;
+    }
 
     /* empty state */
     .empty-state {
@@ -477,13 +498,39 @@
 
     /* ══ AI AVATAR SVG ══ */
     .ai-avatar {
-      width: 28px; height: 28px; border-radius: 50%;
+      width: 56px; height: 56px; border-radius: 14px;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; margin-top: 2px;
-      background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
-      box-shadow: 0 0 0 2px var(--accent-purple-bg);
+      background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+      box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.30), 0 2px 6px rgba(15, 23, 42, 0.10);
+      overflow: hidden;
+      padding: 2px;
     }
-    .ai-avatar svg { display: block; }
+    :root[data-theme="dark"] .ai-avatar {
+      background: var(--accent-purple-bg);
+      box-shadow: 0 0 0 1px var(--border);
+    }
+    .ai-avatar svg { display: block; width: 100%; height: 100%; }
+    .ai-avatar .ai-bot-body { transform-origin: 256px 350px; animation: aiBotFloat 3.6s ease-in-out infinite; }
+    .ai-avatar .ai-bot-antenna { transform-origin: 256px 60px; animation: aiBotAntenna 2s ease-in-out infinite; }
+    .ai-avatar .ai-bot-logo { transform-origin: 410px 180px; animation: aiBotLogoFloat 3.6s ease-in-out infinite; }
+    @keyframes aiBotFloat {
+      0%, 100% { transform: translateY(0) rotate(-1.2deg); }
+      50%      { transform: translateY(-6px) rotate(1.2deg); }
+    }
+    @keyframes aiBotLogoFloat {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-4px); }
+    }
+    @keyframes aiBotAntenna {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50%      { transform: scale(1.18); opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ai-avatar .ai-bot-body,
+      .ai-avatar .ai-bot-antenna,
+      .ai-avatar .ai-bot-logo { animation: none; }
+    }
 
     /* ══ KATEX ══ */
     .katex { color: var(--text-primary); font-size: 1em; }
@@ -1330,17 +1377,52 @@
     scrollEnd();
   }
 
-  const AI_AVATAR_SVG = `<svg width="16" height="16" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="16" cy="16" r="7" fill="white" fill-opacity="0.92"/>
-    <circle cx="16" cy="16" r="3.5" fill="#6366f1"/>
-    <path d="M16 4 L16 8" stroke="white" stroke-width="2" stroke-linecap="round"/>
-    <path d="M16 24 L16 28" stroke="white" stroke-width="2" stroke-linecap="round"/>
-    <path d="M4 16 L8 16" stroke="white" stroke-width="2" stroke-linecap="round"/>
-    <path d="M24 16 L28 16" stroke="white" stroke-width="2" stroke-linecap="round"/>
-    <path d="M7.51 7.51 L10.34 10.34" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
-    <path d="M21.66 21.66 L24.49 24.49" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
-    <path d="M24.49 7.51 L21.66 10.34" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
-    <path d="M10.34 21.66 L7.51 24.49" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+  const AI_AVATAR_SVG = `<svg viewBox="40 30 432 432" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="aiBotGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#ffffff"/>
+        <stop offset="100%" stop-color="#f1f5f9"/>
+      </linearGradient>
+    </defs>
+    <ellipse cx="256" cy="440" rx="110" ry="15" fill="#000000" opacity="0.1"/>
+    <g class="ai-bot-body">
+      <path d="M 200 320 C 140 330, 130 400, 160 410" fill="none" stroke="#ffffff" stroke-width="32" stroke-linecap="round"/>
+      <circle cx="160" cy="410" r="16" fill="#3b82f6"/>
+      <path d="M 312 320 C 372 320, 390 280, 410 260" fill="none" stroke="#ffffff" stroke-width="32" stroke-linecap="round"/>
+      <rect x="236" y="250" width="40" height="40" rx="8" fill="#94a3b8"/>
+      <rect x="186" y="280" width="140" height="140" rx="45" fill="url(#aiBotGradient)" stroke="#e2e8f0" stroke-width="4"/>
+      <rect x="216" y="310" width="80" height="70" rx="25" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2"/>
+      <circle cx="240" cy="345" r="5" fill="#10b981"/>
+      <circle cx="272" cy="345" r="5" fill="#3b82f6"/>
+      <rect x="146" y="160" width="20" height="60" rx="10" fill="#3b82f6"/>
+      <rect x="346" y="160" width="20" height="60" rx="10" fill="#3b82f6"/>
+      <rect x="156" y="120" width="200" height="140" rx="40" fill="url(#aiBotGradient)" stroke="#e2e8f0" stroke-width="4"/>
+      <g class="ai-bot-antenna">
+        <path d="M 240 120 L 272 120 L 264 90 L 248 90 Z" fill="#94a3b8"/>
+        <rect x="252" y="70" width="8" height="20" fill="#cbd5e1"/>
+        <circle cx="256" cy="60" r="14" fill="#fbbf24"/>
+      </g>
+      <rect x="176" y="140" width="160" height="90" rx="25" fill="#0f172a"/>
+      <circle cx="220" cy="185" r="12" fill="#38bdf8"/>
+      <circle cx="292" cy="185" r="12" fill="#38bdf8"/>
+      <path d="M 246 205 Q 256 215 266 205" fill="none" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="200" cy="200" r="8" fill="#f472b6" opacity="0.4"/>
+      <circle cx="312" cy="200" r="8" fill="#f472b6" opacity="0.4"/>
+      <g>
+        <circle cx="220" cy="185" r="22" fill="rgba(255,255,255,0.10)" stroke="#f1f5f9" stroke-width="5"/>
+        <circle cx="292" cy="185" r="22" fill="rgba(255,255,255,0.10)" stroke="#f1f5f9" stroke-width="5"/>
+        <line x1="242" y1="185" x2="270" y2="185" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round"/>
+        <line x1="198" y1="180" x2="184" y2="174" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round"/>
+        <line x1="314" y1="180" x2="328" y2="174" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round"/>
+        <path d="M 208 175 Q 214 168 222 170" stroke="rgba(255,255,255,0.65)" stroke-width="3" stroke-linecap="round" fill="none"/>
+        <path d="M 280 175 Q 286 168 294 170" stroke="rgba(255,255,255,0.65)" stroke-width="3" stroke-linecap="round" fill="none"/>
+      </g>
+      <path d="M 390 260 A 20 20 0 0 0 430 260 Z" fill="#3b82f6"/>
+    </g>
+    <ellipse cx="410" cy="255" rx="22" ry="5" fill="#000000" opacity="0.15"/>
+    <g class="ai-bot-logo">
+      <image href="{% static 'imagenes/logo_UTN_BOT.png' %}" x="340" y="110" width="140" height="140" preserveAspectRatio="xMidYMid meet"/>
+    </g>
   </svg>`;
 
   function addAI(htmlContent, typing = false) {

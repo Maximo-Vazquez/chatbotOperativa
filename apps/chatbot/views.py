@@ -1,4 +1,5 @@
 import json
+import re
 
 from django.conf import settings
 from django.http import JsonResponse
@@ -109,6 +110,56 @@ def _model_supports_tools(provider_key, model):
     return True
 
 
+# Bloques DSML que algunos modelos DeepSeek emiten como texto en lugar de
+# usar el campo nativo `tool_calls`. Los detectamos para parsearlos manualmente.
+_DSML_BLOCK_RE = re.compile(
+    r"<\s*[│|｜][^>]*?DSML[^>]*?[│|｜]\s*tool_calls\s*>(.*?)<\s*/\s*[│|｜][^>]*?DSML[^>]*?[│|｜]\s*tool_calls\s*>",
+    re.DOTALL,
+)
+_DSML_INVOKE_RE = re.compile(
+    r"<\s*[│|｜][^>]*?DSML[^>]*?[│|｜]\s*invoke\s+name\s*=\s*\"([^\"]+)\"\s*>(.*?)<\s*/\s*[│|｜][^>]*?DSML[^>]*?[│|｜]\s*invoke\s*>",
+    re.DOTALL,
+)
+_DSML_PARAM_RE = re.compile(
+    r"<\s*[│|｜][^>]*?DSML[^>]*?[│|｜]\s*parameter\s+name\s*=\s*\"([^\"]+)\"(?:\s+string\s*=\s*\"(true|false)\")?\s*>(.*?)<\s*/\s*[│|｜][^>]*?DSML[^>]*?[│|｜]\s*parameter\s*>",
+    re.DOTALL,
+)
+
+
+def _parse_dsml_tool_calls(text: str):
+    """Si el modelo emitió tool_calls como texto DSML, devuelve una lista
+    de (nombre_funcion, dict_argumentos). Si no encuentra, devuelve []."""
+    if not text or "DSML" not in text:
+        return []
+    calls = []
+    for m_invoke in _DSML_INVOKE_RE.finditer(text):
+        fn_name = m_invoke.group(1)
+        body = m_invoke.group(2)
+        args = {}
+        for m_param in _DSML_PARAM_RE.finditer(body):
+            pname = m_param.group(1)
+            is_string_flag = m_param.group(2)
+            raw = m_param.group(3).strip()
+            if is_string_flag == "false":
+                try:
+                    args[pname] = json.loads(raw)
+                except (json.JSONDecodeError, ValueError):
+                    args[pname] = raw
+            else:
+                args[pname] = raw
+        calls.append((fn_name, args))
+    return calls
+
+
+def _strip_dsml_blocks(text: str) -> str:
+    """Quita cualquier bloque DSML residual del texto visible al usuario."""
+    if not text:
+        return text
+    cleaned = _DSML_BLOCK_RE.sub("", text)
+    cleaned = re.sub(r"<\s*/?\s*[│|｜][^>]*?DSML[^>]*?[│|｜][^>]*?>", "", cleaned)
+    return cleaned.strip()
+
+
 @csrf_exempt
 @requiere_acceso_chat
 @require_POST
@@ -138,7 +189,13 @@ def chat_api(request):
     suggested_tool = (payload.get("suggested_tool") or "").strip()
 
     history = _clean_history(request.session.get("chat_history", []))
-    messages = [{"role": "system", "content": settings.CHATBOT_SYSTEM_PROMPT}]
+    system_prompt = settings.CHATBOT_SYSTEM_PROMPT + (
+        "\n\nIMPORTANTE: cuando necesites usar una herramienta, usá EXCLUSIVAMENTE "
+        "el mecanismo nativo de function calling (tool_calls). Nunca escribas bloques "
+        "<DSML>, <invoke>, <parameter> ni etiquetas similares en el contenido del mensaje. "
+        "Si no vas a usar una herramienta, respondé directamente en español."
+    )
+    messages = [{"role": "system", "content": system_prompt}]
     for item in history:
         messages.append({"role": "user", "content": item["user"]})
         messages.append({"role": "assistant", "content": item["assistant"]})
@@ -222,9 +279,50 @@ def chat_api(request):
                 messages=messages,
                 temperature=0.4,
             )
-            assistant_message = (response2.choices[0].message.content or "").strip()
+            assistant_message = _strip_dsml_blocks((response2.choices[0].message.content or "").strip())
         else:
             assistant_message = (choice.message.content or "").strip()
+
+            # Fallback: el modelo emitió tool_calls como texto DSML
+            dsml_calls = _parse_dsml_tool_calls(assistant_message) if supports_tools else []
+            if dsml_calls:
+                for fn_name, fn_args in dsml_calls:
+                    result = ejecutar_herramienta(fn_name, fn_args)
+                    if request.user.is_authenticated:
+                        ToolCall.objects.create(
+                            user=request.user,
+                            tool_name=fn_name,
+                            input_data=fn_args,
+                            output_data=result,
+                        )
+                    tool_result_data = {
+                        "tool_name": fn_name,
+                        "input": fn_args,
+                        "output": result,
+                    }
+                    messages.append({
+                        "role": "assistant",
+                        "content": (
+                            f"He invocado la herramienta {fn_name}. "
+                            f"Resultado: {json.dumps(result, ensure_ascii=False)}"
+                        ),
+                    })
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            "Interpretá el resultado anterior y respondeme en español, "
+                            "sin volver a llamar herramientas y sin incluir ningún bloque DSML."
+                        ),
+                    })
+
+                response2 = client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=0.4,
+                )
+                assistant_message = (response2.choices[0].message.content or "").strip()
+
+            assistant_message = _strip_dsml_blocks(assistant_message)
 
     except Exception as exc:
         return JsonResponse({"error": f"Error al consultar {provider['label']}: {exc}"}, status=502)
