@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6,12 +7,13 @@
   <title>Acceso</title>
   <style>
     :root {
-      --bg: #f2f5f9;
+      --bg: #eef2f8;
       --panel: #ffffff;
       --line: #dde4ec;
       --text: #102a43;
       --muted: #52606d;
       --brand: #0b5fff;
+      --brand-2: #0db4d2;
       --brand-soft: #e8f0ff;
       --ok: #0f7b47;
       --err: #b42318;
@@ -19,9 +21,10 @@
 
     * { box-sizing: border-box; }
 
+    html, body { height: 100%; }
+
     body {
       margin: 0;
-      min-height: 100vh;
       font-family: "Segoe UI", "Trebuchet MS", sans-serif;
       color: var(--text);
       background:
@@ -33,23 +36,127 @@
       padding: 24px;
     }
 
-    .card {
-      width: min(480px, 100%);
+    .shell {
+      width: min(960px, 100%);
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 28px;
-      box-shadow: 0 20px 40px rgba(16, 42, 67, 0.08);
+      border-radius: 22px;
+      box-shadow: 0 30px 60px rgba(16, 42, 67, 0.12);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1.05fr 1fr;
+      min-height: 560px;
+    }
+
+    /* ── Panel izquierdo (marca) ── */
+    .hero {
+      position: relative;
+      padding: 40px 36px;
+      color: #fff;
+      background:
+        radial-gradient(circle at 80% 10%, rgba(255,255,255,0.18), transparent 55%),
+        radial-gradient(circle at 10% 90%, rgba(13,180,210,0.45), transparent 55%),
+        linear-gradient(135deg, #0b5fff 0%, #0a3fb0 60%, #062a7a 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    .hero::before, .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(2px);
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .hero::before {
+      width: 220px; height: 220px;
+      background: radial-gradient(circle, #4ee0ff 0%, transparent 70%);
+      top: -60px; right: -40px;
+    }
+    .hero::after {
+      width: 260px; height: 260px;
+      background: radial-gradient(circle, #6f8cff 0%, transparent 70%);
+      bottom: -80px; left: -60px;
+    }
+
+    .hero-top, .hero-mid, .hero-bottom { position: relative; z-index: 1; }
+
+    .hero-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .hero-logo img {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+      border-radius: 14px;
+      padding: 6px;
+      background: rgba(255,255,255,0.95);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+    }
+
+    .hero h2 {
+      margin: 18px 0 10px;
+      font-size: 1.9rem;
+      line-height: 1.2;
+    }
+    .hero p {
+      margin: 0;
+      color: rgba(255,255,255,0.82);
+      font-size: 0.98rem;
+      line-height: 1.5;
+    }
+
+    .features {
+      list-style: none;
+      padding: 0;
+      margin: 22px 0 0;
+      display: grid;
+      gap: 10px;
+    }
+    .features li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.92rem;
+      color: rgba(255,255,255,0.92);
+    }
+    .features .dot {
+      width: 26px; height: 26px;
+      border-radius: 8px;
+      display: grid; place-items: center;
+      background: rgba(255,255,255,0.16);
+      border: 1px solid rgba(255,255,255,0.22);
+      font-size: 0.85rem;
+    }
+
+    .hero-bottom {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.65);
+    }
+
+    /* ── Panel derecho (formulario) ── */
+    .form-panel {
+      padding: 40px 36px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     h1 {
       margin: 0 0 6px;
-      font-size: 1.5rem;
+      font-size: 1.55rem;
       letter-spacing: 0.01em;
     }
 
     .subtitle {
-      margin: 0 0 18px;
+      margin: 0 0 22px;
       color: var(--muted);
       font-size: 0.95rem;
     }
@@ -59,23 +166,27 @@
       grid-template-columns: 1fr 1fr;
       gap: 8px;
       margin-bottom: 18px;
+      padding: 4px;
+      background: #f4f7fb;
+      border: 1px solid var(--line);
+      border-radius: 12px;
     }
 
     .tabs a {
       text-decoration: none;
       text-align: center;
-      border-radius: 10px;
-      padding: 10px;
-      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 9px 10px;
       color: var(--muted);
       font-weight: 600;
+      font-size: 0.92rem;
       transition: 0.2s ease;
     }
 
     .tabs a.active {
-      border-color: var(--brand);
-      background: var(--brand-soft);
+      background: #fff;
       color: var(--brand);
+      box-shadow: 0 2px 6px rgba(16,42,67,0.08);
     }
 
     .field { margin-bottom: 12px; }
@@ -83,7 +194,7 @@
     label {
       display: block;
       margin-bottom: 6px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       font-weight: 600;
     }
 
@@ -94,24 +205,34 @@
       padding: 11px 12px;
       font-size: 0.95rem;
       outline: none;
+      background: #fbfcfe;
+      transition: border-color .15s, box-shadow .15s, background .15s;
     }
 
     input:focus {
       border-color: var(--brand);
+      background: #fff;
       box-shadow: 0 0 0 3px rgba(11, 95, 255, 0.15);
     }
 
     .button {
       width: 100%;
-      margin-top: 6px;
+      margin-top: 8px;
       border: 0;
       border-radius: 10px;
       padding: 12px;
-      background: var(--brand);
+      background: linear-gradient(135deg, var(--brand) 0%, #093fb5 100%);
       color: #fff;
       font-weight: 700;
       cursor: pointer;
+      box-shadow: 0 8px 18px rgba(11,95,255,0.28);
+      transition: transform .15s ease, box-shadow .15s ease;
     }
+    .button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 22px rgba(11,95,255,0.32);
+    }
+    .button:active { transform: translateY(0); }
 
     .messages {
       display: grid;
@@ -134,70 +255,129 @@
     .message.info { border-left-color: var(--brand); }
 
     .footnote {
-      margin-top: 14px;
+      margin-top: 18px;
       color: var(--muted);
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       text-align: center;
     }
 
-    @media (max-width: 540px) {
-      .card { padding: 22px; }
+    /* ── Mobile ── */
+    @media (max-width: 820px) {
+      body { padding: 0; align-items: stretch; }
+      .shell {
+        grid-template-columns: 1fr;
+        min-height: 100vh;
+        min-height: 100dvh;
+        border-radius: 0;
+        border: 0;
+        box-shadow: none;
+      }
+      .hero {
+        padding: 28px 24px 32px;
+        text-align: center;
+        align-items: center;
+        border-radius: 0 0 28px 28px;
+      }
+      .hero-logo { justify-content: center; }
+      .hero-logo img { width: 72px; height: 72px; border-radius: 18px; }
+      .hero h2 { font-size: 1.45rem; margin-top: 14px; }
+      .hero p { font-size: 0.92rem; max-width: 360px; margin: 0 auto; }
+      .features {
+        margin-top: 18px;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 12px;
+        text-align: left;
+      }
+      .features li { font-size: 0.82rem; }
+      .hero-bottom { display: none; }
+      .form-panel { padding: 26px 22px 32px; }
+    }
+
+    @media (max-width: 420px) {
+      .features { grid-template-columns: 1fr; }
+      .hero { padding: 24px 20px 28px; }
+      .form-panel { padding: 22px 18px 28px; }
+      h1 { font-size: 1.35rem; }
     }
   </style>
 </head>
 <body>
-  <main class="card">
-    <h1>Acceso al chatbot</h1>
-    <p class="subtitle">Inicia sesion o crea una cuenta para usar la interfaz principal.</p>
-
-    <nav class="tabs">
-      <a href="{% url 'login' %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}" class="{% if mode == 'login' %}active{% endif %}">Iniciar sesion</a>
-      <a href="{% url 'register' %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}" class="{% if mode == 'register' %}active{% endif %}">Registrarme</a>
-    </nav>
-
-    {% if messages %}
-      <div class="messages">
-        {% for message in messages %}
-          <div class="message {{ message.tags|default:'info' }}">{{ message }}</div>
-        {% endfor %}
+  <main class="shell">
+    <aside class="hero">
+      <div class="hero-top">
+        <div class="hero-logo">
+          <img src="{% static 'imagenes/logo.png' %}" alt="Logo">
+          <span>Chatbot Operativa</span>
+        </div>
       </div>
-    {% endif %}
 
-    {% if mode == 'register' %}
-      <form method="post" action="{% url 'register' %}">
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ next_url|default:'' }}">
-        <div class="field">
-          <label for="register-email">Email</label>
-          <input id="register-email" type="email" name="email" autocomplete="email" required>
-        </div>
-        <div class="field">
-          <label for="register-password">Contrasena</label>
-          <input id="register-password" type="password" name="password" autocomplete="new-password" required>
-        </div>
-        <div class="field">
-          <label for="register-password-confirm">Confirmar contrasena</label>
-          <input id="register-password-confirm" type="password" name="password_confirm" autocomplete="new-password" required>
-        </div>
-        <button class="button" type="submit">Crear cuenta</button>
-      </form>
-    {% else %}
-      <form method="post" action="{% url 'login' %}">
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ next_url|default:'' }}">
-        <div class="field">
-          <label for="login-email">Email</label>
-          <input id="login-email" type="email" name="email" autocomplete="email" required>
-        </div>
-        <div class="field">
-          <label for="login-password">Contrasena</label>
-          <input id="login-password" type="password" name="password" autocomplete="current-password" required>
-        </div>
-        <button class="button" type="submit">Entrar</button>
-      </form>
-    {% endif %}
+      <div class="hero-mid">
+        <h2>Tu asistente operativo, siempre listo.</h2>
+        <p>Conversaciones, herramientas y respuestas claras desde una sola interfaz.</p>
+        <ul class="features">
+          <li><span class="dot">&#9889;</span> Respuestas rapidas</li>
+          <li><span class="dot">&#128274;</span> Acceso seguro</li>
+          <li><span class="dot">&#129504;</span> Memoria de chats</li>
+          <li><span class="dot">&#128295;</span> Herramientas integradas</li>
+        </ul>
+      </div>
 
-    <p class="footnote">Esqueleto minimo: login + chatbot.</p>
+      <div class="hero-bottom">&copy; Chatbot Operativa</div>
+    </aside>
+
+    <section class="form-panel">
+      <h1>{% if mode == 'register' %}Crear cuenta{% else %}Iniciar sesion{% endif %}</h1>
+      <p class="subtitle">{% if mode == 'register' %}Registrate para empezar a usar el chatbot.{% else %}Bienvenido de vuelta. Ingresa tus credenciales.{% endif %}</p>
+
+      <nav class="tabs">
+        <a href="{% url 'login' %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}" class="{% if mode == 'login' %}active{% endif %}">Iniciar sesion</a>
+        <a href="{% url 'register' %}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}" class="{% if mode == 'register' %}active{% endif %}">Registrarme</a>
+      </nav>
+
+      {% if messages %}
+        <div class="messages">
+          {% for message in messages %}
+            <div class="message {{ message.tags|default:'info' }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% if mode == 'register' %}
+        <form method="post" action="{% url 'register' %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ next_url|default:'' }}">
+          <div class="field">
+            <label for="register-email">Email</label>
+            <input id="register-email" type="email" name="email" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label for="register-password">Contrasena</label>
+            <input id="register-password" type="password" name="password" autocomplete="new-password" required>
+          </div>
+          <div class="field">
+            <label for="register-password-confirm">Confirmar contrasena</label>
+            <input id="register-password-confirm" type="password" name="password_confirm" autocomplete="new-password" required>
+          </div>
+          <button class="button" type="submit">Crear cuenta</button>
+        </form>
+      {% else %}
+        <form method="post" action="{% url 'login' %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ next_url|default:'' }}">
+          <div class="field">
+            <label for="login-email">Email</label>
+            <input id="login-email" type="email" name="email" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label for="login-password">Contrasena</label>
+            <input id="login-password" type="password" name="password" autocomplete="current-password" required>
+          </div>
+          <button class="button" type="submit">Entrar</button>
+        </form>
+      {% endif %}
+
+      <p class="footnote">Acceso protegido &middot; Chatbot Operativa</p>
+    </section>
   </main>
 </body>
 </html>
