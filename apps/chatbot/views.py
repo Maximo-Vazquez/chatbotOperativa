@@ -14,7 +14,6 @@ from .constants import (
     MODEL_DEEPSEEK_PRO,
     get_context_window,
     get_model_params,
-    is_thinking_model,
 )
 from apps.herramientas.tools import TOOL_DEFINITIONS, ejecutar_herramienta
 from apps.herramientas.models import ToolCall
@@ -100,6 +99,7 @@ def chat_home(request):
 
     return render(request, "chatbot/home.html", {
         "chat_history": history,
+        "chat_usage": request.session.get("chat_last_usage"),
         "chatbot_model": model,
         "current_provider": provider_key,
         "current_model": model,
@@ -168,6 +168,27 @@ def _strip_dsml_blocks(text: str) -> str:
     return cleaned.strip()
 
 
+def _completion_kwargs(model, messages, params, include_tools=False):
+    call_kwargs = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": params["max_tokens"],
+        "extra_body": {
+            "thinking": {"type": "enabled" if params["thinking"] else "disabled"},
+        },
+    }
+    if params["thinking"]:
+        call_kwargs["extra_body"]["reasoning_effort"] = "high"
+    elif params["temperature"] is not None:
+        call_kwargs["temperature"] = params["temperature"]
+
+    if include_tools:
+        call_kwargs["tools"] = TOOL_DEFINITIONS
+        call_kwargs["tool_choice"] = "auto"
+
+    return call_kwargs
+
+
 @requiere_acceso_chat
 @require_POST
 def chat_api(request):
@@ -226,15 +247,7 @@ def chat_api(request):
         supports_tools = _model_supports_tools(provider_key, model)
         params = get_model_params(model)
 
-        call_kwargs = {
-            "model": model,
-            "messages": messages,
-            "temperature": params["temperature"],
-            "max_tokens": params["max_tokens"],
-        }
-        if supports_tools:
-            call_kwargs["tools"] = TOOL_DEFINITIONS
-            call_kwargs["tool_choice"] = "auto"
+        call_kwargs = _completion_kwargs(model, messages, params, include_tools=supports_tools)
 
         response = client.chat.completions.create(**call_kwargs)
         choice = response.choices[0]
@@ -284,12 +297,7 @@ def chat_api(request):
                 })
 
             # Segunda llamada: el modelo interpreta los resultados
-            response2 = client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=params["temperature"],
-                max_tokens=params["max_tokens"],
-            )
+            response2 = client.chat.completions.create(**_completion_kwargs(model, messages, params))
             last_response = response2
             assistant_message = _strip_dsml_blocks((response2.choices[0].message.content or "").strip())
         else:
@@ -327,12 +335,7 @@ def chat_api(request):
                         ),
                     })
 
-                response2 = client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=params["temperature"],
-                    max_tokens=params["max_tokens"],
-                )
+                response2 = client.chat.completions.create(**_completion_kwargs(model, messages, params))
                 last_response = response2
                 assistant_message = (response2.choices[0].message.content or "").strip()
 
@@ -461,6 +464,7 @@ def save_config(request):
         return JsonResponse({"error": "Modelo inválido para ese proveedor."}, status=400)
 
     prev_provider = request.session.get("chat_provider")
+    history_cleared = False
     request.session["chat_provider"] = provider_key
     request.session["chat_model"] = model or provider["models"][0]
 
@@ -477,6 +481,7 @@ def save_config(request):
     if api_key or (prev_provider and prev_provider != provider_key):
         request.session["chat_history"] = []
         request.session["chat_last_usage"] = None
+        history_cleared = True
 
     has_key = bool(settings.CLAVE_API_DEEPSEEK_INVITADO) if _es_solicitud_invitada(request) else bool(
         _get_user_api_key(request.user, provider_key) or
@@ -488,4 +493,5 @@ def save_config(request):
         "provider": provider_key,
         "model": request.session["chat_model"],
         "has_api_key": has_key,
+        "history_cleared": history_cleared,
     })
