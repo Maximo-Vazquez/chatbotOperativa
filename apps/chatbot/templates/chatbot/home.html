@@ -287,6 +287,56 @@
     .topbar-btn:hover { background: var(--topbar-hover); color: var(--text-primary); }
     .logout-trigger:hover { background: rgba(220,38,38,.1) !important; color: #ef4444 !important; border-color: rgba(220,38,38,.22) !important; }
 
+    /* ══ CONTEXT GAUGE ══ */
+    .ctx-gauge-wrap { position: relative; display: flex; align-items: center; margin-left: auto; }
+    .ctx-gauge-btn {
+      width: 20px; height: 20px; border-radius: 50%;
+      border: none; background: transparent;
+      cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center;
+      opacity: .85; transition: opacity .13s;
+    }
+    .ctx-gauge-btn:hover { opacity: 1; }
+    .ctx-gauge-svg { width: 18px; height: 18px; transform: rotate(-90deg); display: block; }
+    .ctx-gauge-track { stroke: var(--border-strong, var(--border)); fill: none; stroke-width: 2.5; opacity: .55; }
+    .ctx-gauge-fill {
+      fill: none; stroke-width: 2.5; stroke-linecap: round;
+      stroke: var(--accent-purple, #8b5cf6);
+      transition: stroke-dashoffset .4s ease, stroke .2s;
+    }
+    .ctx-gauge-fill.warn { stroke: #f59e0b; }
+    .ctx-gauge-fill.danger { stroke: #ef4444; }
+    .ctx-gauge-popover {
+      position: absolute; bottom: calc(100% + 8px); right: 0;
+      min-width: 220px; padding: 10px 12px;
+      background: var(--bg-secondary, #1f2230); color: var(--text-primary);
+      border: 1px solid var(--border); border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25);
+      font-size: .72rem; line-height: 1.45; z-index: 50;
+      opacity: 0; pointer-events: none; transform: translateY(4px);
+      transition: opacity .15s, transform .15s;
+    }
+    .ctx-gauge-wrap.open .ctx-gauge-popover,
+    .ctx-gauge-wrap:hover .ctx-gauge-popover {
+      opacity: 1; pointer-events: auto; transform: translateY(0);
+    }
+    .ctx-gauge-popover .ctx-title {
+      font-weight: 700; font-size: .72rem; margin-bottom: 4px; color: var(--text-primary);
+    }
+    .ctx-gauge-popover .ctx-row { color: var(--text-secondary); }
+    .ctx-gauge-popover .ctx-row strong { color: var(--text-primary); }
+
+    /* Botón enviar en modo "stop" mientras procesa (estilo ChatGPT) */
+    .send-btn.stop-mode {
+      background: var(--text-primary, #fff) !important;
+      color: var(--bg-primary, #000) !important;
+      opacity: 1 !important;
+      cursor: pointer !important;
+    }
+    .send-btn.stop-mode:hover { opacity: .85 !important; }
+    .send-btn .stop-icon { display: none; }
+    .send-btn.stop-mode .stop-icon { display: block; }
+    .send-btn.stop-mode .send-icon { display: none; }
+
     /* ══ CHAT WINDOW ══ */
     .chat-window {
       flex: 1; overflow-y: auto; scroll-behavior: smooth;
@@ -469,8 +519,9 @@
     .chat-input {
       width: 100%; background: transparent; border: none; outline: none; resize: none;
       color: var(--text-primary); font-family: inherit; font-size: .9rem;
-      line-height: 1.55; min-height: 22px; max-height: 180px; overflow-y: auto;
+      line-height: 1.55; min-height: 22px; max-height: 180px; overflow-y: hidden;
     }
+    .chat-input.scrollable { overflow-y: auto; }
     .chat-input::placeholder { color: var(--text-muted); }
     .chat-input::-webkit-scrollbar { width: 3px; }
     .chat-input::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 2px; }
@@ -976,7 +1027,7 @@
       <div class="input-inner">
         <textarea id="chat-input" class="chat-input" placeholder="Preguntá sobre series temporales, ACF/PACF, modelos ARIMA…" rows="1" autocomplete="off"></textarea>
         <div class="input-bottom-row" style="gap:7px">
-          <button id="reasoning-toggle" class="reasoning-toggle{% if current_model == 'deepseek-reasoner' %} active{% endif %}" title="Activar modo razonamiento">
+          <button id="reasoning-toggle" class="reasoning-toggle{% if current_model == 'deepseek-v4-pro' or current_model == 'deepseek-reasoner' %} active{% endif %}" title="Activar modo razonamiento">
             <div class="toggle-switch"><div class="toggle-knob"></div></div>
             <span class="toggle-label">Razonamiento</span>
           </button>
@@ -992,10 +1043,26 @@
               <!-- poblado por JS -->
             </div>
           </div>
+
+          <div class="ctx-gauge-wrap" id="ctx-gauge-wrap">
+            <button class="ctx-gauge-btn" id="ctx-gauge-btn" type="button" aria-label="Uso de contexto">
+              <svg class="ctx-gauge-svg" viewBox="0 0 24 24">
+                <circle class="ctx-gauge-track" cx="12" cy="12" r="9.5"></circle>
+                <circle id="ctx-gauge-fill" class="ctx-gauge-fill" cx="12" cy="12" r="9.5"
+                        stroke-dasharray="59.69" stroke-dashoffset="59.69"></circle>
+              </svg>
+            </button>
+            <div class="ctx-gauge-popover" id="ctx-gauge-popover">
+              <div class="ctx-title">Contexto del chat</div>
+              <div class="ctx-row"><strong id="ctx-pct-used">0 %</strong> usado (<span id="ctx-pct-rem">100 %</span> libre)</div>
+              <div class="ctx-row"><strong id="ctx-tokens">0 / 1.0M</strong> tokens</div>
+            </div>
+          </div>
         </div>
       </div>
       <button id="send-btn" class="send-btn" disabled>
-        <i class='bx bx-up-arrow-alt' style="font-size:1.15rem"></i>
+        <i class='bx bx-up-arrow-alt send-icon' style="font-size:1.15rem"></i>
+        <i class='bx bx-stop stop-icon' style="font-size:1.15rem"></i>
       </button>
     </div>
     <div class="input-hint">Enter para enviar · Shift+Enter para nueva línea</div>
@@ -1179,9 +1246,9 @@
   const apikeyInputWrap = document.getElementById('apikey-input-wrap');
   const reasoningToggle = document.getElementById('reasoning-toggle');
 
-  const REASONING_MODEL    = 'deepseek-reasoner';
+  const REASONING_MODEL    = 'deepseek-v4-pro';
   const REASONING_PROVIDER = 'deepseek';
-  const STANDARD_MODELS   = { deepseek: 'deepseek-chat' };
+  const STANDARD_MODELS   = { deepseek: 'deepseek-v4-flash' };
 
   let hasApiKey = HAS_API_KEY;
 
@@ -1485,8 +1552,10 @@
   }
 
   function setSendActive(on) {
-    sendBtn.disabled = !on;
-    sendBtn.classList.toggle('active', on);
+    // Si el contexto está lleno, on queda forzado a false.
+    const allow = on && !(typeof ctxFull !== 'undefined' && ctxFull);
+    sendBtn.disabled = !allow;
+    sendBtn.classList.toggle('active', allow);
   }
 
   // Cargar historial previo
@@ -1496,14 +1565,19 @@
     scrollEnd();
   }
 
-  chatInput.addEventListener('input', () => {
+  function autosizeInput() {
     chatInput.style.height = 'auto';
-    chatInput.style.height = Math.min(chatInput.scrollHeight, 180) + 'px';
+    const sh = chatInput.scrollHeight;
+    chatInput.style.height = Math.min(sh, 180) + 'px';
+    chatInput.classList.toggle('scrollable', sh > 180);
+  }
+  chatInput.addEventListener('input', () => {
+    autosizeInput();
     setSendActive(!!chatInput.value.trim());
   });
 
   chatInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!sendBtn.disabled) sendBtn.click(); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!sendBtn.disabled && !sendBtn.classList.contains('stop-mode')) sendBtn.click(); }
   });
 
   // ══ HERRAMIENTAS ══
@@ -1842,13 +1916,110 @@
 
   loadTools();
 
+  // ── Indicador de ventana de contexto ──
+  const ctxGaugeWrap = document.getElementById('ctx-gauge-wrap');
+  const ctxGaugeFill = document.getElementById('ctx-gauge-fill');
+  const ctxGaugeBtn  = document.getElementById('ctx-gauge-btn');
+  const ctxPctUsed   = document.getElementById('ctx-pct-used');
+  const ctxPctRem    = document.getElementById('ctx-pct-rem');
+  const ctxTokensEl  = document.getElementById('ctx-tokens');
+  // Circunferencia para r=9.5 → 2π·9.5 ≈ 59.69
+  const CTX_CIRC = 2 * Math.PI * 9.5;
+
+  function fmtTokens(n) {
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1) + 'M';
+    if (n >= 1_000) return Math.round(n / 1000) + 'k';
+    return String(n);
+  }
+
+  const CTX_STORAGE_KEY = 'chatbot:ctx_usage';
+  function persistCtxUsage(usage) {
+    try {
+      if (usage) localStorage.setItem(CTX_STORAGE_KEY, JSON.stringify(usage));
+      else localStorage.removeItem(CTX_STORAGE_KEY);
+    } catch {}
+  }
+  function loadCtxUsage() {
+    try {
+      const raw = localStorage.getItem(CTX_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+
+  const CTX_BLOCK_THRESHOLD = 95; // % a partir del cual no se permite enviar
+  let ctxFull = false;
+  function updateCtxGauge(usage, opts) {
+    const persist = !opts || opts.persist !== false;
+    const window_ = (usage && usage.context_window) || 1_048_576;
+    const used = (usage && usage.prompt_tokens) || 0;
+    const pctUsed = (usage && typeof usage.context_used_percent === 'number')
+      ? usage.context_used_percent : (window_ ? (used / window_ * 100) : 0);
+    const pctRem = Math.max(0, 100 - pctUsed);
+
+    ctxGaugeFill.style.strokeDasharray = CTX_CIRC;
+    ctxGaugeFill.style.strokeDashoffset = CTX_CIRC * (1 - Math.min(pctUsed, 100) / 100);
+    ctxGaugeFill.classList.toggle('warn', pctUsed >= 70 && pctUsed < 90);
+    ctxGaugeFill.classList.toggle('danger', pctUsed >= 90);
+
+    ctxPctUsed.textContent = `${pctUsed.toFixed(pctUsed < 10 ? 1 : 0)} %`;
+    ctxPctRem.textContent  = `${pctRem.toFixed(pctRem < 10 ? 1 : 0)} %`;
+    ctxTokensEl.textContent = `${fmtTokens(used)} / ${fmtTokens(window_)}`;
+    ctxGaugeBtn.title = `Contexto del chat: ${pctUsed.toFixed(0)}% usado · ${fmtTokens(used)} / ${fmtTokens(window_)}`;
+    ctxFull = pctUsed >= CTX_BLOCK_THRESHOLD;
+    applyCtxBlock();
+    if (persist) persistCtxUsage(usage);
+  }
+
+  function applyCtxBlock() {
+    if (ctxFull) {
+      chatInput.placeholder = 'Contexto lleno · iniciá un nuevo chat para continuar';
+      // Refrescar disabled del send-btn según estado actual
+      if (!isProcessing) sendBtn.disabled = true;
+    } else {
+      chatInput.placeholder = 'Preguntá sobre series temporales, ACF/PACF, modelos ARIMA…';
+      if (!isProcessing) sendBtn.disabled = !chatInput.value.trim();
+    }
+  }
+  // Restaurar último usage guardado para que sobreviva a F5
+  updateCtxGauge(loadCtxUsage(), { persist: false });
+  // Click toggle (mobile-friendly), hover ya está manejado por CSS
+  ctxGaugeBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    ctxGaugeWrap.classList.toggle('open');
+  });
+  document.addEventListener('click', e => {
+    if (!ctxGaugeWrap.contains(e.target)) ctxGaugeWrap.classList.remove('open');
+  });
+
+  // ── Estado de procesamiento + cancelación ──
+  let isProcessing = false;
+  let activeAbortController = null;
+
+  function setProcessing(on) {
+    isProcessing = on;
+    // En modo stop el botón queda habilitado (clickeable para abortar);
+    // si no procesa: depende de texto y de que el contexto no esté lleno.
+    sendBtn.disabled = on ? false : (ctxFull || !chatInput.value.trim());
+    sendBtn.classList.toggle('stop-mode', on);
+    sendBtn.classList.toggle('active', !on && !ctxFull && !!chatInput.value.trim());
+    sendBtn.title = on ? 'Detener generación' : (ctxFull ? 'Contexto lleno · iniciá un nuevo chat' : 'Enviar');
+    chatInput.classList.toggle('processing', on);
+  }
+
   sendBtn.addEventListener('click', async () => {
+    // Click durante generación → abortar (estilo ChatGPT).
+    if (isProcessing) {
+      if (activeAbortController) {
+        try { activeAbortController.abort(); } catch {}
+      }
+      return;
+    }
     const text = chatInput.value.trim();
     if (!text) return;
+    if (ctxFull) return; // bloqueo duro: contexto lleno
     hideEmpty();
     chatInput.value = '';
     chatInput.style.height = 'auto';
-    setSendActive(false);
     addUser(text);
     const aiEl = addAI('', true);
 
@@ -1856,14 +2027,18 @@
     const usedTool = activeTool;
     if (activeTool) selectTool(null);
 
-    // Si hay herramienta seleccionada: inyectar card loading en el bubble de la IA
-    let loadingCardEl = null;
     if (usedTool) {
-      loadingCardEl = injectToolCardLoading(usedTool);
+      const loadingCardEl = injectToolCardLoading(usedTool);
       aiEl.innerHTML = '';
       aiEl.appendChild(loadingCardEl);
       scrollEnd();
     }
+
+    setProcessing(true);
+    const controller = new AbortController();
+    activeAbortController = controller;
+    // Cada bubble queda atado a su controller; si se aborta, ignoramos su resultado.
+    const myAiEl = aiEl;
 
     try {
       const body = { message: text };
@@ -1873,50 +2048,76 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
       let data;
       try { data = await res.json(); } catch { data = {}; }
 
-      if (!res.ok) {
-        const detail = data.error || data.detail || JSON.stringify(data) || '(sin detalle)';
-        aiEl.innerHTML = `<span style="color:#f87171"><strong>Error HTTP ${res.status}${res.statusText ? ' ' + res.statusText : ''}</strong><br>${esc(detail)}</span>`;
-      } else if (data.error) {
-        aiEl.innerHTML = `<span style="color:#f87171"><strong>Error del servidor:</strong><br>${esc(data.error)}</span>`;
-      } else {
-        aiEl.innerHTML = '';
+      if (controller.signal.aborted) return;
 
-        // Si la IA usó herramienta → reemplazar loading card con resultado real
+      if (data && data.context_overflow) {
+        if (data.usage) updateCtxGauge(data.usage);
+        myAiEl.innerHTML = `<span style="color:#f59e0b"><strong>Contexto lleno.</strong><br>${esc(data.error || 'El chat es demasiado largo. Iniciá un nuevo chat para continuar.')}</span>`;
+      } else if (!res.ok) {
+        const detail = data.error || data.detail || JSON.stringify(data) || '(sin detalle)';
+        myAiEl.innerHTML = `<span style="color:#f87171"><strong>Error HTTP ${res.status}${res.statusText ? ' ' + res.statusText : ''}</strong><br>${esc(detail)}</span>`;
+      } else if (data.error) {
+        myAiEl.innerHTML = `<span style="color:#f87171"><strong>Error del servidor:</strong><br>${esc(data.error)}</span>`;
+      } else {
+        myAiEl.innerHTML = '';
+
         if (data.tool_result) {
           const resultEl = buildToolCardEl(data.tool_result);
-          // Animación de entrada
           resultEl.style.opacity = '0';
           resultEl.style.transform = 'translateY(8px)';
           resultEl.style.transition = 'opacity .25s, transform .25s';
-          aiEl.appendChild(resultEl);
+          myAiEl.appendChild(resultEl);
           requestAnimationFrame(() => {
             resultEl.style.opacity = '1';
             resultEl.style.transform = 'translateY(0)';
           });
         }
 
-        // Respuesta de texto del asistente
         const textDiv = document.createElement('div');
         textDiv.innerHTML = renderMD(data.response || 'Sin respuesta.');
-        aiEl.appendChild(textDiv);
+        myAiEl.appendChild(textDiv);
+
+        if (data.usage) updateCtxGauge(data.usage);
       }
     } catch (err) {
-      aiEl.innerHTML = `<span style="color:#f87171"><strong>No se pudo conectar con el servidor.</strong><br>${esc(String(err))}</span>`;
+      if (err && err.name === 'AbortError') {
+        // Si el bubble sigue vivo (abort manual del usuario, no reset por nuevo chat),
+        // reemplazar los 3 puntitos / loading por un mensaje de "detenida".
+        if (myAiEl.isConnected) {
+          myAiEl.innerHTML = `<span style="color:var(--text-secondary);font-style:italic">Respuesta detenida.</span>`;
+        }
+      } else {
+        myAiEl.innerHTML = `<span style="color:#f87171"><strong>No se pudo conectar con el servidor.</strong><br>${esc(String(err))}</span>`;
+      }
     } finally {
+      if (activeAbortController === controller) activeAbortController = null;
+      // Liberar siempre el estado: si fue reset, resetChat ya llamó setProcessing(false)
+      // y este es idempotente.
+      setProcessing(false);
       scrollEnd();
       chatInput.focus();
     }
   });
 
   async function resetChat() {
+    // Abortar cualquier request activa para que no escriba sobre el chat nuevo.
+    if (activeAbortController) {
+      try { activeAbortController.abort(); } catch {}
+      activeAbortController = null;
+    }
+    setProcessing(false);
     try { await fetch("{% url 'chat_reset' %}", { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') } }); } catch {}
     document.querySelectorAll('.msg-wrap').forEach(e => e.remove());
     showEmpty(); chatInput.value = ''; chatInput.style.height = 'auto';
     setSendActive(false); chatInput.focus();
+    persistCtxUsage(null);
+    ctxFull = false;
+    updateCtxGauge(null);
   }
 
   newChatBtn.addEventListener('click', resetChat);

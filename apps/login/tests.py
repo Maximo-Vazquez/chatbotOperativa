@@ -31,7 +31,7 @@ class LoginTests(TestCase):
         self.assertEqual(response.url, reverse("chat_home"))
         self.assertTrue(self.client.session.get(SESION_INVITADO))
         self.assertEqual(self.client.session.get("chat_provider"), "deepseek")
-        self.assertEqual(self.client.session.get("chat_model"), "deepseek-chat")
+        self.assertEqual(self.client.session.get("chat_model"), "deepseek-v4-flash")
 
     def test_login_invitado_no_crea_usuario_django(self):
         self.client.post(reverse("login_invitado"))
