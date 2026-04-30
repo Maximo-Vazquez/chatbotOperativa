@@ -4,21 +4,27 @@ import re
 from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
-from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 from openai import OpenAI
 
 from .models import UserAPIKey
+from .constants import (
+    MODEL_DEEPSEEK_FLASH,
+    MODEL_DEEPSEEK_PRO,
+    get_context_window,
+    get_model_params,
+    is_thinking_model,
+)
 from apps.herramientas.tools import TOOL_DEFINITIONS, ejecutar_herramienta
 from apps.herramientas.models import ToolCall
 
-MAX_HISTORY_ITEMS = 12
 SESION_INVITADO = "es_invitado"
 
 PROVIDERS = {
     "deepseek": {
         "label": "DeepSeek",
-        "models": ["deepseek-chat", "deepseek-reasoner"],
+        "models": [MODEL_DEEPSEEK_FLASH, MODEL_DEEPSEEK_PRO],
         "base_url": settings.DEEPSEEK_BASE_URL,
         "key_setting": "DEEPSEEK_API_KEY",
     },
@@ -53,7 +59,7 @@ def _clean_history(raw_history):
         assistant_message = (item.get("assistant") or "").strip()
         if user_message and assistant_message:
             cleaned.append({"user": user_message, "assistant": assistant_message})
-    return cleaned[-MAX_HISTORY_ITEMS:]
+    return cleaned
 
 
 def _get_user_api_key(user, provider_key):
@@ -87,6 +93,7 @@ def _get_chat_config(request):
 
 
 @requiere_acceso_chat
+@ensure_csrf_cookie
 def chat_home(request):
     history = _clean_history(request.session.get("chat_history", []))
     provider_key, provider, model, api_key = _get_chat_config(request)
@@ -104,9 +111,10 @@ def chat_home(request):
 
 
 def _model_supports_tools(provider_key, model):
-    """DeepSeek Reasoner no soporta tool calling."""
-    if provider_key == "deepseek" and model == "deepseek-reasoner":
-        return False
+    """Ambos modelos DeepSeek V4 soportan tool calling.
+    El alias legacy 'deepseek-reasoner' (mapea a v4-pro thinking) tampoco lo bloquea
+    porque la API V4 lo expone en ambos modos. Mantenemos el helper por si en el
+    futuro alguno lo deshabilita."""
     return True
 
 
@@ -160,7 +168,6 @@ def _strip_dsml_blocks(text: str) -> str:
     return cleaned.strip()
 
 
-@csrf_exempt
 @requiere_acceso_chat
 @require_POST
 def chat_api(request):
@@ -217,11 +224,13 @@ def chat_api(request):
 
         client = OpenAI(**client_kwargs)
         supports_tools = _model_supports_tools(provider_key, model)
+        params = get_model_params(model)
 
         call_kwargs = {
             "model": model,
             "messages": messages,
-            "temperature": 0.4,
+            "temperature": params["temperature"],
+            "max_tokens": params["max_tokens"],
         }
         if supports_tools:
             call_kwargs["tools"] = TOOL_DEFINITIONS
@@ -229,6 +238,7 @@ def chat_api(request):
 
         response = client.chat.completions.create(**call_kwargs)
         choice = response.choices[0]
+        last_response = response  # se actualiza si hay segunda llamada
 
         tool_result_data = None  # datos para el frontend si se usó herramienta
 
@@ -277,8 +287,10 @@ def chat_api(request):
             response2 = client.chat.completions.create(
                 model=model,
                 messages=messages,
-                temperature=0.4,
+                temperature=params["temperature"],
+                max_tokens=params["max_tokens"],
             )
+            last_response = response2
             assistant_message = _strip_dsml_blocks((response2.choices[0].message.content or "").strip())
         else:
             assistant_message = (choice.message.content or "").strip()
@@ -318,37 +330,117 @@ def chat_api(request):
                 response2 = client.chat.completions.create(
                     model=model,
                     messages=messages,
-                    temperature=0.4,
+                    temperature=params["temperature"],
+                    max_tokens=params["max_tokens"],
                 )
+                last_response = response2
                 assistant_message = (response2.choices[0].message.content or "").strip()
 
             assistant_message = _strip_dsml_blocks(assistant_message)
 
     except Exception as exc:
+        if _is_context_length_error(exc):
+            context_window = get_context_window(model)
+            return JsonResponse(
+                {
+                    "error": (
+                        "El chat es demasiado largo y superó el contexto del modelo. "
+                        "Iniciá un nuevo chat para continuar."
+                    ),
+                    "context_overflow": True,
+                    "usage": {
+                        "context_window": context_window,
+                        "prompt_tokens": context_window,
+                        "context_used_percent": 100,
+                        "context_remaining_percent": 0,
+                        "context_remaining_tokens": 0,
+                    },
+                },
+                status=413,
+            )
         return JsonResponse({"error": f"Error al consultar {provider['label']}: {exc}"}, status=502)
 
     if not assistant_message:
         assistant_message = "No pude generar respuesta. Intentá nuevamente."
 
     history.append({"user": user_message, "assistant": assistant_message})
-    request.session["chat_history"] = history[-MAX_HISTORY_ITEMS:]
+    request.session["chat_history"] = history
 
     response_payload = {"response": assistant_message}
     if tool_result_data:
         response_payload["tool_result"] = tool_result_data
 
+    usage_payload = _build_usage_payload(last_response, model)
+    response_payload["usage"] = usage_payload
+    request.session["chat_last_usage"] = usage_payload
+
     return JsonResponse(response_payload)
 
 
-@csrf_exempt
+def _is_context_length_error(exc) -> bool:
+    """Detecta el 400 que devuelve DeepSeek (formato OpenAI) cuando el prompt
+    supera la ventana de contexto del modelo."""
+    msg = str(exc).lower()
+    if "context_length_exceeded" in msg or "context length" in msg:
+        return True
+    if "maximum context" in msg and "tokens" in msg:
+        return True
+    code = getattr(exc, "code", None) or ""
+    if isinstance(code, str) and code.lower() == "context_length_exceeded":
+        return True
+    return False
+
+
+def _build_usage_payload(api_response, model):
+    """Construye el objeto `usage` que consume el frontend para el indicador
+    de ventana de contexto. Usa `prompt_tokens` como referencia del contexto
+    enviado; el cache hit/miss es solo informativo (costo/latencia)."""
+    context_window = get_context_window(model)
+    usage = getattr(api_response, "usage", None)
+    if usage is None:
+        return {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 0,
+            "context_window": context_window,
+            "context_used_percent": 0,
+            "context_remaining_percent": 100,
+            "context_remaining_tokens": context_window,
+        }
+
+    prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
+    completion_tokens = getattr(usage, "completion_tokens", 0) or 0
+    total_tokens = getattr(usage, "total_tokens", 0) or 0
+    cache_hit = getattr(usage, "prompt_cache_hit_tokens", 0) or 0
+    cache_miss = getattr(usage, "prompt_cache_miss_tokens", 0) or 0
+
+    used = min(prompt_tokens, context_window)
+    used_pct = (used / context_window * 100) if context_window else 0
+    remaining = max(context_window - used, 0)
+
+    return {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": total_tokens,
+        "prompt_cache_hit_tokens": cache_hit,
+        "prompt_cache_miss_tokens": cache_miss,
+        "context_window": context_window,
+        "context_used_percent": round(used_pct, 2),
+        "context_remaining_percent": round(100 - used_pct, 2),
+        "context_remaining_tokens": remaining,
+    }
+
+
 @requiere_acceso_chat
 @require_POST
 def reset_chat(request):
     request.session["chat_history"] = []
+    request.session["chat_last_usage"] = None
     return JsonResponse({"ok": True})
 
 
-@csrf_exempt
 @requiere_acceso_chat
 @require_POST
 def save_config(request):
@@ -368,6 +460,7 @@ def save_config(request):
     if model and model not in provider["models"]:
         return JsonResponse({"error": "Modelo inválido para ese proveedor."}, status=400)
 
+    prev_provider = request.session.get("chat_provider")
     request.session["chat_provider"] = provider_key
     request.session["chat_model"] = model or provider["models"][0]
 
@@ -378,7 +471,12 @@ def save_config(request):
             defaults={"api_key": api_key},
         )
 
-    request.session["chat_history"] = []
+    # Solo limpiar el historial cuando cambia el proveedor o se pisa la API key.
+    # Cambiar de modelo dentro del mismo proveedor (ej. flash ↔ pro vía toggle
+    # de razonamiento) preserva la conversación.
+    if api_key or (prev_provider and prev_provider != provider_key):
+        request.session["chat_history"] = []
+        request.session["chat_last_usage"] = None
 
     has_key = bool(settings.CLAVE_API_DEEPSEEK_INVITADO) if _es_solicitud_invitada(request) else bool(
         _get_user_api_key(request.user, provider_key) or

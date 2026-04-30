@@ -3,6 +3,8 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from unittest.mock import patch
 
+from .views import _clean_history
+
 
 class ChatbotViewsTests(TestCase):
     def setUp(self):
@@ -16,6 +18,14 @@ class ChatbotViewsTests(TestCase):
     def test_home_requires_login(self):
         response = self.client.get(reverse("chat_home"))
         self.assertEqual(response.status_code, 302)
+
+    def test_clean_history_keeps_full_valid_history(self):
+        raw_history = [
+            {"user": f"pregunta {i}", "assistant": f"respuesta {i}"}
+            for i in range(20)
+        ]
+
+        self.assertEqual(_clean_history(raw_history), raw_history)
 
     @patch("apps.chatbot.views.OpenAI")
     @patch("apps.chatbot.views.settings.DEEPSEEK_API_KEY", "dummy-key")

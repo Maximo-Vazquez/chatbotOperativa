@@ -50,7 +50,7 @@ def login_invitado_view(request):
 
     request.session[SESION_INVITADO] = True
     request.session["chat_provider"] = "deepseek"
-    request.session["chat_model"] = "deepseek-chat"
+    request.session["chat_model"] = "deepseek-v4-flash"
     request.session.modified = True
     return redirect(_resolve_next_url(request) or "chat_home")
 
