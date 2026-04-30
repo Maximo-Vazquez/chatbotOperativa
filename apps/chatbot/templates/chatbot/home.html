@@ -1,9 +1,19 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="es" data-theme="dark">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    (function() {
+      const storageKey = 'app-theme';
+      const legacyKeys = ['chat-theme', 'chatgpt-theme'];
+      const storedTheme = localStorage.getItem(storageKey)
+        || legacyKeys.map((key) => localStorage.getItem(key)).find(Boolean);
+      const theme = storedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
   <title>Series Temporales · Asistente</title>
 
   <!-- Boxicons -->
@@ -48,8 +58,8 @@
       --input-field-bg: #252525;
       --input-field-border: #3a3a3a;
       --accent-green: #19c37d;
-      --accent-purple: #818cf8;
-      --accent-purple-bg: rgba(129,140,248,0.12);
+      --accent-purple: #10b981;
+      --accent-purple-bg: rgba(16,185,129,0.14);
       --accent-green-bg: rgba(25,195,125,0.12);
       --tag-bg: #282828;
       --pre-header: #1a1a1a;
@@ -87,8 +97,8 @@
       --input-field-bg: #fff;
       --input-field-border: #d1d5db;
       --accent-green: #059669;
-      --accent-purple: #6366f1;
-      --accent-purple-bg: rgba(99,102,241,0.08);
+      --accent-purple: #064e3b;
+      --accent-purple-bg: rgba(6,78,59,0.08);
       --accent-green-bg: rgba(5,150,105,0.08);
       --tag-bg: #ebebeb;
       --pre-header: #eaeef2;
@@ -108,8 +118,9 @@
       height: 100dvh;
       overflow: hidden;
       display: flex;
-      transition: background .2s, color .2s;
+      transition: background .55s ease, color .55s ease;
     }
+    /* Overlay para animación circular de cambio de tema */
 
     /* ══ SIDEBAR ══ */
     .sidebar {
@@ -231,7 +242,30 @@
     .user-sub  { font-size: .68rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* ══ MAIN ══ */
-    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg-main); transition: background .2s; }
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg-main); transition: background .55s ease; position: relative; overflow: hidden; }
+    .main::before {
+      content: "";
+      position: absolute;
+      inset: -12px;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: cover;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.28;
+      filter: blur(5px) saturate(0.9) contrast(1.02);
+      transform: scale(1.02);
+      transition: opacity .55s ease, filter .55s ease;
+    }
+    :root[data-theme="light"] .main::before {
+      background-image: url("{% static 'imagenes/fondoInvestigacion_claro.png' %}");
+    }
+    :root[data-theme="dark"] .main::before {
+      background-image: url("{% static 'imagenes/fondoInvestigacion_oscuro.png' %}");
+      opacity: 0.22;
+      filter: blur(6px) saturate(0.78) brightness(0.82) contrast(0.95);
+    }
+    .main > * { position: relative; z-index: 1; }
 
     .topbar {
       display: flex; align-items: center; justify-content: flex-end;
@@ -332,7 +366,7 @@
     .msg-ai { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 2px; }
     .ai-avatar {
       width: 28px; height: 28px; border-radius: 50%;
-      background: linear-gradient(135deg, #818cf8, #6366f1);
+      background: linear-gradient(135deg, #10b981, #059669);
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; margin-top: 2px; color: #fff; font-size: .7rem; font-weight: 700;
     }
@@ -634,7 +668,7 @@
     .tool-dropdown-item.active { color: var(--accent-purple); background: var(--accent-purple-bg); }
     .tool-dropdown-item-icon {
       width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
-      background: rgba(129,140,248,0.12); display: flex; align-items: center;
+      background: rgba(16,185,129,0.14); display: flex; align-items: center;
       justify-content: center; color: var(--accent-purple); font-size: .9rem;
     }
     .tool-dropdown-item-info { flex: 1; min-width: 0; }
@@ -663,16 +697,16 @@
       overflow: hidden;
       max-width: 540px;
     }
-    .tool-card.loading { border-color: rgba(129,140,248,0.4); }
+    .tool-card.loading { border-color: rgba(16,185,129,0.4); }
     .tool-card-header {
       display: flex; align-items: center; gap: 8px;
       padding: 9px 13px;
-      background: rgba(129,140,248,0.08);
-      border-bottom: 1px solid rgba(129,140,248,0.2);
+      background: rgba(16,185,129,0.08);
+      border-bottom: 1px solid rgba(16,185,129,0.2);
     }
     .tool-card-icon {
       width: 26px; height: 26px; border-radius: 7px;
-      background: rgba(129,140,248,0.18);
+      background: rgba(16,185,129,0.18);
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; color: var(--accent-purple); font-size: .95rem;
     }
@@ -685,7 +719,7 @@
     }
     .tool-card-badge {
       font-size: .62rem; font-weight: 700; padding: 2px 7px;
-      border-radius: 20px; background: rgba(129,140,248,0.2);
+      border-radius: 20px; background: rgba(16,185,129,0.2);
       color: var(--accent-purple); text-transform: uppercase; letter-spacing: .06em;
     }
     .tool-card-badge.processing {
@@ -696,7 +730,7 @@
 
     /* barra de progreso animada en el loading */
     .tool-card-progress {
-      height: 2px; background: rgba(129,140,248,0.15); overflow: hidden;
+      height: 2px; background: rgba(16,185,129,0.15); overflow: hidden;
     }
     .tool-card-progress-bar {
       height: 100%; width: 40%;
@@ -751,7 +785,7 @@
     /* expand / chart */
     .tool-card-footer {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 6px 13px 8px; border-top: 1px solid rgba(129,140,248,0.15);
+      padding: 6px 13px 8px; border-top: 1px solid rgba(16,185,129,0.15);
       margin-top: 8px;
     }
     .tc-expand-btn, .tc-copy-all-btn {
@@ -760,12 +794,12 @@
       font-size: .72rem; font-weight: 600; color: var(--text-muted);
       padding: 2px 6px; border-radius: 6px; transition: color .12s, background .12s;
     }
-    .tc-expand-btn:hover, .tc-copy-all-btn:hover { color: var(--accent-purple); background: rgba(129,140,248,0.1); }
+    .tc-expand-btn:hover, .tc-copy-all-btn:hover { color: var(--accent-purple); background: rgba(16,185,129,0.1); }
     .tc-expand-btn i, .tc-copy-all-btn i { font-size: .85rem; }
 
     .tool-card-chart-wrap {
       display: none; padding: 8px 13px 12px;
-      border-top: 1px solid rgba(129,140,248,0.12);
+      border-top: 1px solid rgba(16,185,129,0.12);
     }
     .tool-card-chart-wrap.open { display: block; }
     .tc-chart-canvas { width: 100%; height: 90px; display: block; }
@@ -773,7 +807,7 @@
     /* shimmer skeleton en loading */
     .tc-skeleton {
       height: 10px; border-radius: 6px;
-      background: linear-gradient(90deg, rgba(129,140,248,0.08) 25%, rgba(129,140,248,0.18) 50%, rgba(129,140,248,0.08) 75%);
+      background: linear-gradient(90deg, rgba(16,185,129,0.08) 25%, rgba(16,185,129,0.18) 50%, rgba(16,185,129,0.08) 75%);
       background-size: 200% 100%;
       animation: tcShimmer 1.4s infinite;
       margin-bottom: 6px;
@@ -826,9 +860,6 @@
   <div class="sidebar-head">
     <img src="{% static 'imagenes/logo.png' %}" alt="Logo" class="logo-img">
     <span class="app-name">Series Temporales</span>
-    <button id="new-icon-btn" class="icon-btn" title="Nuevo chat">
-      <i class='bx bx-edit-alt' style="font-size:1.1rem"></i>
-    </button>
   </div>
 
   <button id="new-chat-btn" class="sb-btn">
@@ -933,7 +964,7 @@
           <span class="qa-card-text">¿Qué modelo elegir?</span>
         </button>
         <button class="qa-card" onclick="sendGuide('¿Qué es el ruido blanco? ¿Cómo lo detecto en los residuos de un modelo y qué hago si no lo hay?')">
-          <span class="qa-card-icon"><i class='bx bx-wave'></i></span>
+          <span class="qa-card-icon"><i class='bx bx-wind'></i></span>
           <span class="qa-card-text">Ruido blanco y residuos</span>
         </button>
       </div>
@@ -1079,16 +1110,28 @@
   const tMoon = document.getElementById('t-moon');
   const hljsDark  = document.getElementById('hljs-dark-theme');
   const hljsLight = document.getElementById('hljs-light-theme');
+  const THEME_STORAGE_KEY = 'app-theme';
+  const LEGACY_THEME_KEYS = ['chat-theme', 'chatgpt-theme'];
+
+  function getPreferredTheme() {
+    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY)
+      || LEGACY_THEME_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
+    if (storedTheme === 'dark' || storedTheme === 'light') {
+      return storedTheme;
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
 
   function applyTheme(t) {
     html.setAttribute('data-theme', t);
-    localStorage.setItem('chat-theme', t);
+    localStorage.setItem(THEME_STORAGE_KEY, t);
+    LEGACY_THEME_KEYS.forEach((key) => localStorage.setItem(key, t));
     tSun.style.display  = t === 'dark' ? 'inline-block' : 'none';
     tMoon.style.display = t === 'dark' ? 'none' : 'inline-block';
     hljsDark.disabled   = t !== 'dark';
     hljsLight.disabled  = t === 'dark';
   }
-  applyTheme(localStorage.getItem('chat-theme') || 'dark');
+  applyTheme(getPreferredTheme());
   themeBtn.addEventListener('click', () =>
     applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
 
@@ -1360,7 +1403,7 @@
   const chatInput  = document.getElementById('chat-input');
   const sendBtn    = document.getElementById('send-btn');
   const newChatBtn = document.getElementById('new-chat-btn');
-  const newIconBtn = document.getElementById('new-icon-btn');
+  const newIconBtn = document.getElementById('new-icon-btn'); // legacy, puede ser null
 
   const history = JSON.parse(document.getElementById('chat-history').textContent || '[]');
 
@@ -1733,8 +1776,8 @@
 
     // Colores según tema
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const barColor   = 'rgba(129,140,248,0.7)';
-    const lineColor  = '#818cf8';
+    const barColor   = 'rgba(16,185,129,0.7)';
+    const lineColor  = '#10b981';
     const textColor  = isDark ? '#888' : '#999';
     const gridColor  = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
 
@@ -1768,8 +1811,8 @@
 
       // Barra con gradiente
       const grad = ctx.createLinearGradient(0, y, 0, y + bH);
-      grad.addColorStop(0, 'rgba(129,140,248,0.85)');
-      grad.addColorStop(1, 'rgba(99,102,241,0.3)');
+      grad.addColorStop(0, 'rgba(16,185,129,0.85)');
+      grad.addColorStop(1, 'rgba(5,150,105,0.3)');
       ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.roundRect ? ctx.roundRect(x, y, bW, bH, [3, 3, 0, 0]) : ctx.rect(x, y, bW, bH);
@@ -1877,7 +1920,7 @@
   }
 
   newChatBtn.addEventListener('click', resetChat);
-  newIconBtn.addEventListener('click', resetChat);
+  if (newIconBtn) newIconBtn.addEventListener('click', resetChat);
 
   function sendGuide(text) {
     chatInput.value = text;

@@ -1,12 +1,22 @@
 {% load static %}
 {% load socialaccount %}
 <!DOCTYPE html>
-<html lang="es" data-theme="light">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ingresar</title>
   <link href="https://cdn.jsdelivr.net/npm/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  <script>
+    (function() {
+      const storageKey = 'app-theme';
+      const legacyKeys = ['chat-theme', 'chatgpt-theme'];
+      const storedTheme = localStorage.getItem(storageKey)
+        || legacyKeys.map((key) => localStorage.getItem(key)).find(Boolean);
+      const theme = storedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
   <style>
     :root[data-theme="light"] {
       --bg-page: #f3f4f6;
@@ -75,12 +85,23 @@
       height: 200px;
     }
 
-    .visual-side video {
+    .visual-side::before {
+      content: "";
       position: absolute;
       inset: 0;
-      width: 100%; height: 100%;
-      object-fit: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
       filter: brightness(0.72);
+      z-index: 0;
+    }
+
+    :root[data-theme="light"] .visual-side::before {
+      background-image: url("{% static 'imagenes/fondoInvestigacion_claro.png' %}");
+    }
+
+    :root[data-theme="dark"] .visual-side::before {
+      background-image: url("{% static 'imagenes/fondoInvestigacion_oscuro.png' %}");
     }
 
     .visual-overlay {
@@ -92,6 +113,7 @@
       justify-content: flex-end;
       padding: 22px 22px 24px;
       color: white;
+      z-index: 1;
     }
 
     .logo-badge {
@@ -104,6 +126,7 @@
       align-items: center;
       gap: 8px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.14);
+      z-index: 2;
     }
 
     .logo-badge img { width: 26px; height: 26px; object-fit: contain; }
@@ -189,7 +212,7 @@
     @media (max-width: 899px) {
       body { flex-direction: column; }
       .form-side { min-height: auto; flex: 1; padding: 32px 22px 40px; }
-      .features-grid { grid-template-columns: 1fr; }
+      .features-grid { display: none; }
     }
 
     @media (min-width: 900px) {
@@ -256,7 +279,7 @@
     }
     .bot-greet .ai-bot-wave {
       transform-origin: 200px 300px;
-      animation: botWave 1.6s ease-in-out infinite;
+      animation: botWave 0.8s ease-in-out infinite;
     }
     @keyframes botFloat {
       0%, 100% { transform: translateY(0) rotate(-1.2deg); }
@@ -538,9 +561,6 @@
 
   <!-- Panel visual lateral — solo desktop, sin video duplicado en el fondo -->
   <div class="visual-side">
-    <video autoplay muted loop playsinline>
-      <source src="{% static 'videos/tienda.mp4' %}" type="video/mp4">
-    </video>
     <div class="logo-badge">
       <img src="{% static 'imagenes/logo.png' %}" alt="Logo">
       <span>Chatbot Operativa</span>
@@ -690,10 +710,22 @@
     const themeBtn = document.getElementById('theme-btn');
     const iconSun = document.getElementById('icon-sun');
     const iconMoon = document.getElementById('icon-moon');
+    const THEME_STORAGE_KEY = 'app-theme';
+    const LEGACY_THEME_KEYS = ['chat-theme', 'chatgpt-theme'];
+
+    function getPreferredTheme() {
+      const storedTheme = localStorage.getItem(THEME_STORAGE_KEY)
+        || LEGACY_THEME_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
+      if (storedTheme === 'dark' || storedTheme === 'light') {
+        return storedTheme;
+      }
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
 
     function applyTheme(theme) {
       html.setAttribute('data-theme', theme);
-      localStorage.setItem('chatgpt-theme', theme);
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+      LEGACY_THEME_KEYS.forEach((key) => localStorage.setItem(key, theme));
       if (theme === 'dark') {
         iconSun.style.display = '';
         iconMoon.style.display = 'none';
@@ -703,7 +735,7 @@
       }
     }
 
-    applyTheme(localStorage.getItem('chatgpt-theme') || 'light');
+    applyTheme(getPreferredTheme());
 
     themeBtn.addEventListener('click', () => {
       applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
