@@ -856,6 +856,110 @@
     .tool-card-chart-wrap.open { display: block; }
     .tc-chart-canvas { width: 100%; height: 90px; display: block; }
 
+    /* ── Header clickeable (collapse/expand de cada card) ── */
+    .tool-card-header { cursor: pointer; user-select: none; }
+    .tool-card-header:hover { background: rgba(16,185,129,0.06); }
+    .tc-collapse-arrow {
+      margin-left: auto; font-size: 1.05rem; color: var(--text-muted);
+      transition: transform .18s ease;
+    }
+    .tool-card.collapsed .tc-collapse-arrow { transform: rotate(180deg); }
+    .tool-card-collapsible {
+      max-height: 1600px; overflow: hidden;
+      transition: max-height .25s ease, opacity .18s ease;
+    }
+    .tool-card.collapsed .tool-card-collapsible {
+      max-height: 0; opacity: 0;
+    }
+    /* Body con altura limitada y scroll interno cuando hay muchos campos */
+    .tool-card-body {
+      max-height: 320px; overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(16,185,129,0.35) transparent;
+    }
+    .tool-card-body::-webkit-scrollbar { width: 6px; }
+    .tool-card-body::-webkit-scrollbar-thumb {
+      background: rgba(16,185,129,0.35); border-radius: 3px;
+    }
+
+    /* ── Grupo de tools: toolbar + tabs ── */
+    .tool-group { display: block; }
+    .tool-group .tool-card { margin-top: 8px; }
+    .tool-group .tool-card:first-of-type { margin-top: 0; }
+
+    .tool-group-toolbar {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+      padding: 5px 9px; border-radius: 8px;
+      background: rgba(16,185,129,0.06);
+      border: 1px solid rgba(16,185,129,0.18);
+    }
+    .tool-group-toolbar .tg-count {
+      font-size: .72rem; font-weight: 700; color: var(--accent-green);
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .tool-group-toolbar .tg-count i { font-size: .9rem; }
+
+    .tool-group-tabs {
+      display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;
+    }
+    .tg-tab {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: .7rem; font-weight: 600; color: var(--text-secondary);
+      background: var(--bg-elevated);
+      border: 1px solid rgba(16,185,129,0.18);
+      cursor: pointer; font-family: inherit;
+      padding: 4px 9px 4px 4px; border-radius: 14px;
+      transition: background .12s, color .12s, border-color .12s;
+    }
+    .tg-tab i { font-size: .82rem; color: var(--accent-green); }
+    .tg-tab:hover { background: rgba(16,185,129,0.08); }
+    .tg-tab.active {
+      background: var(--accent-green); color: #fff; border-color: var(--accent-green);
+    }
+    .tg-tab.active i { color: #fff; }
+    .tg-tab-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--accent-green); color: #fff;
+      font-size: .62rem; font-weight: 700;
+    }
+    .tg-tab.active .tg-tab-num { background: rgba(255,255,255,0.25); }
+
+    /* En modo tabs ocultamos las cards no activas y deshabilitamos collapse del header */
+    .tool-group[data-mode="tabs"] .tool-card.hidden-tab { display: none; }
+    .tool-group[data-mode="tabs"] .tool-card-header { cursor: default; }
+    .tool-group[data-mode="tabs"] .tool-card-header:hover { background: transparent; }
+    .tool-group[data-mode="tabs"] .tc-collapse-arrow { display: none; }
+
+    /* Badge "herramientas utilizadas" al final del mensaje (>1 tool) */
+    .tools-used-badge {
+      margin-top: 10px; padding: 8px 11px;
+      border: 1px dashed rgba(16,185,129,0.35);
+      border-radius: 10px;
+      background: rgba(16,185,129,0.05);
+    }
+    .tools-used-badge .tu-title {
+      font-size: .74rem; font-weight: 700; color: var(--accent-green);
+      display: inline-flex; align-items: center; gap: 6px; margin-bottom: 6px;
+    }
+    .tools-used-badge .tu-title i { font-size: .95rem; }
+    .tools-used-badge .tu-chips {
+      display: flex; flex-wrap: wrap; gap: 5px;
+    }
+    .tools-used-badge .tu-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: .72rem; font-weight: 600; color: var(--text-secondary);
+      background: var(--bg-elevated); padding: 3px 9px 3px 4px;
+      border-radius: 14px; border: 1px solid rgba(16,185,129,0.18);
+    }
+    .tools-used-badge .tu-chip i { font-size: .82rem; color: var(--accent-green); }
+    .tools-used-badge .tu-chip .tu-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--accent-green); color: #fff;
+      font-size: .62rem; font-weight: 700;
+    }
+
     /* shimmer skeleton en loading */
     .tc-skeleton {
       height: 10px; border-radius: 6px;
@@ -1699,7 +1803,323 @@
     return div;
   }
 
-  // ── Tool Card: resultado completo ──
+  // ────────────────────────────────────────────────────────────
+  //  Tool Card: dispatcher por tool_name + renderers especificos
+  // ────────────────────────────────────────────────────────────
+
+  function tcRow(label, val, opts={}) {
+    if (val === undefined || val === null || val === '') return '';
+    const v = String(val);
+    const cls = opts.highlight ? 'highlight' : (opts.ok ? 'ok' : (opts.warn ? 'warn' : ''));
+    return `<div class="tool-card-row">
+      <span class="tool-card-key">${esc(label)}</span>
+      <span class="tool-card-val ${cls}">
+        <span>${esc(v)}</span>
+        <button class="tc-copy-val" title="Copiar" data-copy="${esc(v)}" onclick="tcCopyVal(this)">
+          <i class='bx bx-copy'></i>
+        </button>
+      </span>
+    </div>`;
+  }
+
+  function tcSection(title) {
+    return `<div class="tool-card-section">${esc(title)}</div>`;
+  }
+
+  function tcFmt(n, digits=4) {
+    if (n === null || n === undefined || Number.isNaN(n)) return '—';
+    if (typeof n !== 'number') return String(n);
+    if (Math.abs(n) >= 1000) return n.toFixed(0);
+    return n.toFixed(digits);
+  }
+
+  // Renderers por herramienta. Cada uno recibe `out` y devuelve { body, charts? }
+  // body = HTML que se inserta en .tool-card-body
+  // charts = (opcional) función(canvasContainer, out) que dibuja graficos al expandir
+  const TOOL_RENDERERS = {
+    descomposicion_visualizacion_serie(out) {
+      const s = out.estadisticos || {};
+      let body = tcSection('Información general');
+      body += '<div class="tool-card-grid">';
+      body += tcRow('Serie', out.nombre_serie);
+      body += tcRow('Frecuencia (m)', out.frecuencia);
+      body += tcRow('Observaciones', s.n_observaciones);
+      body += '</div>';
+
+      body += tcSection('Estadísticos descriptivos');
+      body += '<div class="tool-card-grid">';
+      body += tcRow('Media', tcFmt(s.media));
+      body += tcRow('Mediana', tcFmt(s.mediana));
+      body += tcRow('Varianza', tcFmt(s.varianza));
+      body += tcRow('Desv. estándar', tcFmt(s.desv_estandar));
+      body += tcRow('Mínimo', tcFmt(s.minimo));
+      body += tcRow('Máximo', tcFmt(s.maximo));
+      body += tcRow('Rango', tcFmt(s.rango));
+      body += tcRow('Q1', tcFmt(s.Q1));
+      body += tcRow('Q2 (mediana)', tcFmt(s.Q2));
+      body += tcRow('Q3', tcFmt(s.Q3));
+      body += tcRow('CV (%)', s.coef_variacion_pct);
+      body += tcRow('Tendencia', s.tendencia_lineal, {highlight: true});
+      body += '</div>';
+
+      const outliers = s.outliers_potenciales || [];
+      const outliersHTML = outliers.length === 0
+        ? `<span class="tool-chip none">Sin outliers detectados</span>`
+        : outliers.map(v => `<span class="tool-chip">${v}</span>`).join('');
+      body += tcSection('Outliers potenciales (>2σ)');
+      body += `<div class="tool-card-chips">${outliersHTML}</div>`;
+
+      if (out.descomposicion) {
+        body += tcSection('Descomposición');
+        body += '<div class="tool-card-grid">';
+        body += tcRow('Modelo', out.descomposicion.modelo);
+        body += '</div>';
+      } else if (out.advertencia_descomposicion) {
+        body += tcSection('Descomposición');
+        body += `<div style="font-size:.78rem;color:var(--text-muted);padding:4px 0">${esc(out.advertencia_descomposicion)}</div>`;
+      }
+
+      return {
+        body,
+        charts: (wrap) => {
+          // 1) Serie original (linea)
+          tcDrawLineChart(wrap, 'Serie original', out.serie || []);
+          if (out.descomposicion) {
+            tcDrawLineChart(wrap, 'Tendencia', out.descomposicion.tendencia || []);
+            tcDrawLineChart(wrap, 'Estacionalidad', out.descomposicion.estacionalidad || []);
+            tcDrawLineChart(wrap, 'Residuo', out.descomposicion.residuo || []);
+          }
+        },
+      };
+    },
+
+    acf(out) {
+      let body = tcSection('Resultado ACF');
+      body += '<div class="tool-card-grid">';
+      body += tcRow('Observaciones', out.n_observaciones);
+      body += tcRow('Lags evaluados', out.lags ? out.lags.length - 1 : '—');
+      body += tcRow('Banda confianza', `±${tcFmt(out.banda_confianza)}`);
+      body += tcRow('Nivel confianza', out.nivel_confianza);
+      body += tcRow('q sugerido', out.q_sugerido, {highlight: true});
+      body += '</div>';
+
+      const sig = out.rezagos_significativos || [];
+      const sigHTML = sig.length === 0
+        ? `<span class="tool-chip none">Ningún rezago significativo</span>`
+        : sig.map(r => `<span class="tool-chip">k=${r.lag} · ρ=${tcFmt(r.rho, 3)}</span>`).join('');
+      body += tcSection('Rezagos significativos');
+      body += `<div class="tool-card-chips">${sigHTML}</div>`;
+
+      if (out.interpretacion) {
+        body += tcSection('Interpretación');
+        body += `<div style="font-size:.78rem;color:var(--text-secondary);padding:4px 0">${esc(out.interpretacion)}</div>`;
+      }
+
+      return {
+        body,
+        charts: (wrap) => tcDrawCorrelogram(wrap, 'ACF', out.acf || [], out.banda_confianza),
+      };
+    },
+
+    pacf(out) {
+      let body = tcSection('Resultado PACF');
+      body += '<div class="tool-card-grid">';
+      body += tcRow('Observaciones', out.n_observaciones);
+      body += tcRow('Lags evaluados', out.lags ? out.lags.length - 1 : '—');
+      body += tcRow('Banda confianza', `±${tcFmt(out.banda_confianza)}`);
+      body += tcRow('Nivel confianza', out.nivel_confianza);
+      body += tcRow('p sugerido', out.p_sugerido, {highlight: true});
+      body += '</div>';
+
+      const sig = out.rezagos_significativos || [];
+      const sigHTML = sig.length === 0
+        ? `<span class="tool-chip none">Ningún rezago significativo</span>`
+        : sig.map(r => `<span class="tool-chip">k=${r.lag} · φ=${tcFmt(r.phi, 3)}</span>`).join('');
+      body += tcSection('Rezagos significativos');
+      body += `<div class="tool-card-chips">${sigHTML}</div>`;
+
+      if (out.interpretacion) {
+        body += tcSection('Interpretación');
+        body += `<div style="font-size:.78rem;color:var(--text-secondary);padding:4px 0">${esc(out.interpretacion)}</div>`;
+      }
+
+      return {
+        body,
+        charts: (wrap) => tcDrawCorrelogram(wrap, 'PACF', out.pacf || [], out.banda_confianza),
+      };
+    },
+
+    modelo_dickey_fuller(out) {
+      const ok = out.es_estacionaria;
+      let body = tcSection('Hipótesis');
+      body += `<div style="font-size:.78rem;color:var(--text-secondary);padding:2px 0 6px">
+        H₀: la serie tiene raíz unitaria (no estacionaria) · H₁: la serie es estacionaria
+      </div>`;
+
+      body += tcSection('Resultado del test ADF');
+      body += '<div class="tool-card-grid">';
+      body += tcRow('Estadístico ADF', tcFmt(out.estadistico_adf));
+      body += tcRow('p-valor', tcFmt(out.p_value, 6));
+      body += tcRow('Significancia α', out.significancia);
+      body += tcRow('Lags usados', out.lags_usados);
+      body += tcRow('Observaciones', out.n_observaciones);
+      body += tcRow('AIC', tcFmt(out.criterio_aic));
+      body += tcRow('Regresión', out.regresion);
+      body += tcRow('¿Estacionaria?', ok ? 'SÍ' : 'NO', ok ? {ok: true} : {warn: true});
+      body += '</div>';
+
+      const cv = out.valores_criticos || {};
+      body += tcSection('Valores críticos');
+      const cvHTML = Object.keys(cv).length === 0
+        ? `<span class="tool-chip none">—</span>`
+        : Object.entries(cv).map(([k,v]) => `<span class="tool-chip" style="background:rgba(168,85,247,.15);color:#a855f7">${esc(k)}: ${tcFmt(v)}</span>`).join('');
+      body += `<div class="tool-card-chips">${cvHTML}</div>`;
+
+      if (out.decision) {
+        body += tcSection('Decisión');
+        body += `<div style="font-size:.78rem;color:${ok ? 'var(--accent-green)' : '#f59e0b'};padding:4px 0;font-weight:600">${esc(out.decision)}</div>`;
+      }
+      return { body };
+    },
+
+    estabilizacion_varianza(out) {
+      let body = tcSection('Transformación aplicada');
+      body += '<div class="tool-card-grid">';
+      body += tcRow('Tipo', out.transformacion, {highlight: true});
+      body += tcRow('Ecuación', out.ecuacion);
+      body += tcRow('n original', out.n_original);
+      body += tcRow('n transformada', out.n_transformada);
+      body += tcRow('Var. original', tcFmt(out.varianza_original));
+      body += tcRow('Var. transformada', tcFmt(out.varianza_transformada));
+      body += '</div>';
+      body += tcSection('Vista previa de valores');
+      const vals = out.valores_transformados || [];
+      body += `<div style="font-size:.74rem;color:var(--text-secondary);font-family:ui-monospace,monospace;line-height:1.5;max-height:80px;overflow:auto;padding:4px 0">
+        [${vals.slice(0, 30).map(v => tcFmt(v, 4)).join(', ')}${vals.length > 30 ? ', …' : ''}]
+      </div>`;
+      return {
+        body,
+        charts: (wrap) => tcDrawLineChart(wrap, 'Serie transformada (ln)', vals),
+      };
+    },
+
+    estabilizacion_media(out) {
+      let body = tcSection('Transformación aplicada');
+      body += '<div class="tool-card-grid">';
+      body += tcRow('Tipo', out.transformacion, {highlight: true});
+      body += tcRow('Ecuación', out.ecuacion);
+      body += tcRow('Orden d', out.orden);
+      body += tcRow('n original', out.n_original);
+      body += tcRow('n transformada', out.n_transformada);
+      body += tcRow('Media original', tcFmt(out.media_original));
+      body += tcRow('Media transformada', tcFmt(out.media_transformada));
+      body += tcRow('Varianza transformada', tcFmt(out.varianza_transformada));
+      body += '</div>';
+      body += tcSection('Vista previa de valores');
+      const vals = out.valores_transformados || [];
+      body += `<div style="font-size:.74rem;color:var(--text-secondary);font-family:ui-monospace,monospace;line-height:1.5;max-height:80px;overflow:auto;padding:4px 0">
+        [${vals.slice(0, 30).map(v => tcFmt(v, 4)).join(', ')}${vals.length > 30 ? ', …' : ''}]
+      </div>`;
+      return {
+        body,
+        charts: (wrap) => tcDrawLineChart(wrap, `Serie diferenciada (d=${out.orden})`, vals),
+      };
+    },
+
+    modelo_ar(out) {
+      let body = tcSection('Modelo ajustado');
+      body += '<div class="tool-card-grid">';
+      body += tcRow('Modelo', out.modelo, {highlight: true});
+      body += tcRow('Orden p', out.orden_p);
+      body += tcRow('Observaciones', out.n_observaciones);
+      body += tcRow('AIC', tcFmt(out.aic));
+      body += tcRow('BIC', tcFmt(out.bic));
+      body += tcRow('MSE residuos', tcFmt(out.mse_residuos));
+      body += '</div>';
+
+      body += tcSection('Coeficientes estimados');
+      const coefs = out.coeficientes || {};
+      const coefsHTML = Object.keys(coefs).length === 0
+        ? `<span class="tool-chip none">—</span>`
+        : Object.entries(coefs).map(([k,v]) => `<span class="tool-chip" style="background:rgba(14,165,233,.15);color:#0ea5e9">${esc(k)}=${tcFmt(v)}</span>`).join('');
+      body += `<div class="tool-card-chips">${coefsHTML}</div>`;
+
+      const lb = out.ljung_box || {};
+      body += tcSection('Validación de residuos (Ljung-Box)');
+      body += '<div class="tool-card-grid">';
+      body += tcRow('Estadístico LB', tcFmt(lb.estadistico));
+      body += tcRow('p-valor', tcFmt(lb.p_value, 6));
+      body += tcRow('Lags', lb.lags);
+      body += tcRow('Media residuos', tcFmt(out.media_residuos));
+      body += tcRow('Var. residuos', tcFmt(out.varianza_residuos));
+      body += tcRow('¿Ruido blanco?', lb.es_ruido_blanco ? 'SÍ' : 'NO', lb.es_ruido_blanco ? {ok:true} : {warn:true});
+      body += '</div>';
+      if (lb.interpretacion) {
+        body += `<div style="font-size:.78rem;color:${lb.es_ruido_blanco ? 'var(--accent-green)' : '#f59e0b'};padding:4px 0;font-weight:600">${esc(lb.interpretacion)}</div>`;
+      }
+
+      body += tcSection(`Pronóstico (${out.pasos_pronostico} paso${out.pasos_pronostico > 1 ? 's' : ''})`);
+      const fc = out.pronostico || [];
+      const fcHTML = fc.length === 0
+        ? `<span class="tool-chip none">—</span>`
+        : fc.map((v,i) => `<span class="tool-chip" style="background:rgba(14,165,233,.18);color:#0ea5e9;font-weight:700">t+${i+1}: ${tcFmt(v)}</span>`).join('');
+      body += `<div class="tool-card-chips">${fcHTML}</div>`;
+
+      return {
+        body,
+        charts: (wrap) => tcDrawLineChart(wrap, 'Pronóstico', fc),
+      };
+    },
+
+    modelo_arima(out) {
+      const o = out.orden || {};
+      let body = tcSection('Modelo ajustado');
+      body += '<div class="tool-card-grid">';
+      body += tcRow('Modelo', out.modelo, {highlight: true});
+      body += tcRow('p (AR)', o.p);
+      body += tcRow('d (I)', o.d);
+      body += tcRow('q (MA)', o.q);
+      body += tcRow('Observaciones', out.n_observaciones);
+      body += tcRow('AIC', tcFmt(out.aic));
+      body += tcRow('BIC', tcFmt(out.bic));
+      body += tcRow('MSE residuos', tcFmt(out.mse_residuos));
+      body += '</div>';
+
+      body += tcSection('Coeficientes estimados');
+      const coefs = out.coeficientes || {};
+      const coefsHTML = Object.keys(coefs).length === 0
+        ? `<span class="tool-chip none">—</span>`
+        : Object.entries(coefs).map(([k,v]) => `<span class="tool-chip" style="background:rgba(236,72,153,.15);color:#ec4899">${esc(k)}=${tcFmt(v)}</span>`).join('');
+      body += `<div class="tool-card-chips">${coefsHTML}</div>`;
+
+      const lb = out.ljung_box || {};
+      body += tcSection('Validación de residuos (Ljung-Box)');
+      body += '<div class="tool-card-grid">';
+      body += tcRow('Estadístico LB', tcFmt(lb.estadistico));
+      body += tcRow('p-valor', tcFmt(lb.p_value, 6));
+      body += tcRow('Lags', lb.lags);
+      body += tcRow('Media residuos', tcFmt(out.media_residuos));
+      body += tcRow('Var. residuos', tcFmt(out.varianza_residuos));
+      body += tcRow('¿Ruido blanco?', lb.es_ruido_blanco ? 'SÍ' : 'NO', lb.es_ruido_blanco ? {ok:true} : {warn:true});
+      body += '</div>';
+      if (lb.interpretacion) {
+        body += `<div style="font-size:.78rem;color:${lb.es_ruido_blanco ? 'var(--accent-green)' : '#f59e0b'};padding:4px 0;font-weight:600">${esc(lb.interpretacion)}</div>`;
+      }
+
+      body += tcSection(`Pronóstico (${out.pasos_pronostico} paso${out.pasos_pronostico > 1 ? 's' : ''})`);
+      const fc = out.pronostico || [];
+      const fcHTML = fc.length === 0
+        ? `<span class="tool-chip none">—</span>`
+        : fc.map((v,i) => `<span class="tool-chip" style="background:rgba(236,72,153,.18);color:#ec4899;font-weight:700">t+${i+1}: ${tcFmt(v)}</span>`).join('');
+      body += `<div class="tool-card-chips">${fcHTML}</div>`;
+
+      return {
+        body,
+        charts: (wrap) => tcDrawLineChart(wrap, 'Pronóstico', fc),
+      };
+    },
+  };
+
   function buildToolCardEl(toolResult) {
     const meta  = toolsMeta[toolResult.tool_name] || {};
     const label = meta.label || toolResult.tool_name;
@@ -1722,74 +2142,109 @@
       return el;
     }
 
-    const LABELS = {
-      nombre_serie:       'Serie',
-      periodo:            'Período',
-      n_observaciones:    'Observaciones',
-      media:              'Media',
-      mediana:            'Mediana',
-      desv_estandar:      'Desv. estándar',
-      minimo:             'Mínimo',
-      maximo:             'Máximo',
-      rango:              'Rango',
-      coef_variacion_pct: 'CV (%)',
-      tendencia:          'Tendencia',
-    };
-
-    // Construir filas con botón copiar
-    let gridHTML = '';
-    for (const [key, friendlyLabel] of Object.entries(LABELS)) {
-      if (out[key] === undefined || out[key] === null) continue;
-      const val = String(out[key]);
-      const isHL = key === 'tendencia';
-      gridHTML += `<div class="tool-card-row">
-        <span class="tool-card-key">${friendlyLabel}</span>
-        <span class="tool-card-val ${isHL ? 'highlight' : ''}">
-          <span>${esc(val)}</span>
-          <button class="tc-copy-val" title="Copiar" data-copy="${esc(val)}" onclick="tcCopyVal(this)">
-            <i class='bx bx-copy'></i>
-          </button>
-        </span>
-      </div>`;
+    const renderer = TOOL_RENDERERS[toolResult.tool_name];
+    let body, chartsFn = null;
+    if (renderer) {
+      const r = renderer(out);
+      body = r.body;
+      chartsFn = r.charts || null;
+    } else {
+      // Fallback genérico: dump JSON
+      body = tcSection('Resultado') +
+        `<pre style="font-size:.72rem;color:var(--text-secondary);background:rgba(0,0,0,.15);padding:8px;border-radius:6px;overflow:auto;max-height:240px;margin:4px 0">${esc(JSON.stringify(out, null, 2))}</pre>`;
     }
 
-    // Outliers
-    const outliers = out.outliers_potenciales || [];
-    const outliersHTML = outliers.length === 0
-      ? `<span class="tool-chip none">Sin outliers detectados</span>`
-      : outliers.map(v => `<span class="tool-chip">${v}</span>`).join('');
-
-    // JSON completo para copiar todo
     const jsonAll = JSON.stringify(out, null, 2);
     const jsonEsc = esc(jsonAll);
+    const showChartBtn = chartsFn ? `
+      <button class="tc-expand-btn" onclick="tcToggleChart(this)" data-open="0">
+        <i class='bx bx-line-chart'></i> Ver gráficos
+      </button>` : '<span></span>';
 
     el.innerHTML = `
-      <div class="tool-card-header">
+      <div class="tool-card-header" onclick="tcToggleCard(this)" role="button" tabindex="0">
         <div class="tool-card-icon"><i class='bx ${icon}'></i></div>
         <span class="tool-card-title">${esc(label)}</span>
         <span class="tool-card-badge">Resultado</span>
+        <i class='bx bx-chevron-up tc-collapse-arrow'></i>
       </div>
-      <div class="tool-card-body">
-        <div class="tool-card-section">Estadísticas</div>
-        <div class="tool-card-grid">${gridHTML}</div>
-        <div class="tool-card-section" style="margin-top:10px">Outliers potenciales (&gt;2σ)</div>
-        <div class="tool-card-chips">${outliersHTML}</div>
-      </div>
-      <div class="tool-card-footer">
-        <button class="tc-expand-btn" onclick="tcToggleChart(this)" data-open="0">
-          <i class='bx bx-line-chart'></i> Ver gráfico
-        </button>
-        <button class="tc-copy-all-btn" title="Copiar resultados como JSON" onclick="tcCopyAll(this,'${jsonEsc.replace(/'/g,"\\'")}')">
-          <i class='bx bx-copy'></i> Copiar todo
-        </button>
-      </div>
-      <div class="tool-card-chart-wrap" id="tc-chart-${Date.now()}">
-        <canvas class="tc-chart-canvas" height="90"></canvas>
+      <div class="tool-card-collapsible">
+        <div class="tool-card-body">${body}</div>
+        <div class="tool-card-footer">
+          ${showChartBtn}
+          <button class="tc-copy-all-btn" title="Copiar resultados como JSON" onclick="tcCopyAll(this,'${jsonEsc.replace(/'/g,"\\'")}')">
+            <i class='bx bx-copy'></i> Copiar todo
+          </button>
+        </div>
+        <div class="tool-card-chart-wrap"></div>
       </div>`;
 
-    // Renderizar gráfico cuando se expanda
-    el._chartData = out;
+    el._chartsFn = chartsFn;
     return el;
+  }
+
+  function tcToggleCard(headerEl) {
+    const card = headerEl.closest('.tool-card');
+    if (!card) return;
+    // En modo tabs el collapse no aplica
+    const group = card.closest('.tool-group');
+    if (group && group.dataset.mode === 'tabs') return;
+    card.classList.toggle('collapsed');
+  }
+
+  // ── Wrapper de grupo: una sola card directa, varias en pestañas ──
+  function buildToolGroupEl(toolResults) {
+    const group = document.createElement('div');
+    group.className = 'tool-group';
+
+    if (toolResults.length === 1) {
+      group.appendChild(buildToolCardEl(toolResults[0]));
+      return group;
+    }
+
+    group.dataset.mode = 'tabs';
+
+    // Encabezado con contador
+    const toolbar = document.createElement('div');
+    toolbar.className = 'tool-group-toolbar';
+    toolbar.innerHTML = `<span class="tg-count"><i class='bx bx-wrench'></i> ${toolResults.length} herramientas</span>`;
+    group.appendChild(toolbar);
+
+    // Pestañas
+    const tabsBar = document.createElement('div');
+    tabsBar.className = 'tool-group-tabs';
+    tabsBar.innerHTML = toolResults.map((tc, i) => {
+      const m = toolsMeta[tc.tool_name] || {};
+      const lbl = m.label || tc.tool_name;
+      const ic = m.icon || 'bx-wrench';
+      return `<button class="tg-tab ${i===0?'active':''}" data-idx="${i}">
+        <span class="tg-tab-num">${i+1}</span>
+        <i class='bx ${ic}'></i>
+        <span class="tg-tab-lbl">${esc(lbl)}</span>
+      </button>`;
+    }).join('');
+    group.appendChild(tabsBar);
+
+    // Cards (solo la activa visible)
+    const cardsWrap = document.createElement('div');
+    cardsWrap.className = 'tool-group-cards';
+    const cardEls = toolResults.map((tc, i) => {
+      const c = buildToolCardEl(tc);
+      if (i > 0) c.classList.add('hidden-tab');
+      cardsWrap.appendChild(c);
+      return c;
+    });
+    group.appendChild(cardsWrap);
+
+    tabsBar.querySelectorAll('.tg-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const idx = parseInt(tab.dataset.idx, 10);
+        tabsBar.querySelectorAll('.tg-tab').forEach(t => t.classList.toggle('active', t === tab));
+        cardEls.forEach((c, i) => c.classList.toggle('hidden-tab', i !== idx));
+      });
+    });
+
+    return group;
   }
 
   // ── Copiar valor individual ──
@@ -1816,7 +2271,7 @@
     });
   }
 
-  // ── Toggle gráfico ──
+  // ── Toggle gráficos ──
   function tcToggleChart(btn) {
     const card = btn.closest('.tool-card');
     const wrap = card.querySelector('.tool-card-chart-wrap');
@@ -1824,61 +2279,79 @@
     if (isOpen) {
       wrap.classList.remove('open');
       btn.dataset.open = '0';
-      btn.innerHTML = `<i class='bx bx-line-chart'></i> Ver gráfico`;
+      btn.innerHTML = `<i class='bx bx-line-chart'></i> Ver gráficos`;
     } else {
       wrap.classList.add('open');
       btn.dataset.open = '1';
-      btn.innerHTML = `<i class='bx bx-chevron-up'></i> Ocultar gráfico`;
+      btn.innerHTML = `<i class='bx bx-chevron-up'></i> Ocultar gráficos`;
       if (!wrap.dataset.rendered) {
         wrap.dataset.rendered = '1';
-        drawMiniChart(wrap.querySelector('canvas'), card._chartData);
+        if (typeof card._chartsFn === 'function') {
+          try { card._chartsFn(wrap); } catch (e) { console.error('chart error:', e); }
+        }
       }
     }
   }
 
-  // ── Gráfico mini con canvas (sin librerías externas) ──
-  function drawMiniChart(canvas, out) {
-    if (!canvas || !out) return;
-    // Usar los valores originales si los tiene el out, si no, gráfico de barras de stats
-    const stats = [
-      { label: 'Min',    val: out.minimo },
-      { label: 'Media',  val: out.media },
-      { label: 'Mediana',val: out.mediana },
-      { label: 'Max',    val: out.maximo },
-    ].filter(s => s.val !== undefined && s.val !== null);
+  // ── Helpers de gráficos ──────────────────────────────────────
+  function tcMakeCanvas(wrap, title, height=120) {
+    const block = document.createElement('div');
+    block.style.marginTop = '8px';
+    if (title) {
+      block.innerHTML = `<div style="font-size:.72rem;color:var(--text-muted);font-weight:600;margin:4px 0 2px">${esc(title)}</div>`;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.className = 'tc-chart-canvas';
+    canvas.style.height = height + 'px';
+    block.appendChild(canvas);
+    wrap.appendChild(block);
+    return canvas;
+  }
 
-    if (!stats.length) return;
-
-    const dpr    = window.devicePixelRatio || 1;
-    const W      = canvas.offsetWidth  || 480;
-    const H      = 90;
-    canvas.width  = W * dpr;
+  function tcSetupCanvas(canvas, height=120) {
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.offsetWidth || 480;
+    const H = height;
+    canvas.width = W * dpr;
     canvas.height = H * dpr;
-    canvas.style.width  = W + 'px';
+    canvas.style.width = W + 'px';
     canvas.style.height = H + 'px';
-
     const ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
+    return { ctx, W, H };
+  }
 
-    // Colores según tema
+  function tcDrawLineChart(wrap, title, valores) {
+    const data = (valores || []).filter(v => v !== null && v !== undefined && !Number.isNaN(v));
+    const canvas = tcMakeCanvas(wrap, title, 110);
+    const { ctx, W, H } = tcSetupCanvas(canvas, 110);
+
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const barColor   = 'rgba(16,185,129,0.7)';
-    const lineColor  = '#10b981';
-    const textColor  = isDark ? '#888' : '#999';
-    const gridColor  = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+    const lineColor = '#10b981';
+    const fillColor = 'rgba(16,185,129,0.15)';
+    const textColor = isDark ? '#888' : '#999';
+    const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
 
-    const padL = 42, padR = 10, padT = 10, padB = 24;
+    const padL = 38, padR = 8, padT = 8, padB = 18;
     const cW = W - padL - padR;
     const cH = H - padT - padB;
 
-    const vals = stats.map(s => s.val);
-    const minV = Math.min(...vals);
-    const maxV = Math.max(...vals);
-    const span = maxV - minV || 1;
-
     ctx.clearRect(0, 0, W, H);
 
-    // Grid lines
+    if (data.length < 2) {
+      ctx.fillStyle = textColor;
+      ctx.font = '500 11px Inter,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Sin datos suficientes para graficar', W / 2, H / 2);
+      return;
+    }
+
+    let minV = Math.min(...data);
+    let maxV = Math.max(...data);
+    if (minV === maxV) { minV -= 1; maxV += 1; }
+    const span = maxV - minV;
+
+    // grid
     ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
     [0, 0.5, 1].forEach(t => {
@@ -1886,44 +2359,129 @@
       ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + cW, y); ctx.stroke();
     });
 
-    // Barras
-    const bW = Math.max(4, cW / stats.length * 0.55);
-    const gap = cW / stats.length;
-    stats.forEach((s, i) => {
-      const x = padL + gap * i + gap / 2 - bW / 2;
-      const norm = (s.val - minV) / span;
-      const bH = Math.max(2, cH * norm);
-      const y = padT + cH - bH;
+    // baseline en 0 si la serie cruza el 0
+    if (minV < 0 && maxV > 0) {
+      const yZero = padT + cH * (1 - (0 - minV) / span);
+      ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.2)';
+      ctx.beginPath(); ctx.moveTo(padL, yZero); ctx.lineTo(padL + cW, yZero); ctx.stroke();
+    }
 
-      // Barra con gradiente
-      const grad = ctx.createLinearGradient(0, y, 0, y + bH);
-      grad.addColorStop(0, 'rgba(16,185,129,0.85)');
-      grad.addColorStop(1, 'rgba(5,150,105,0.3)');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.roundRect ? ctx.roundRect(x, y, bW, bH, [3, 3, 0, 0]) : ctx.rect(x, y, bW, bH);
-      ctx.fill();
+    // area + línea
+    const xAt = i => padL + (data.length === 1 ? cW / 2 : (i / (data.length - 1)) * cW);
+    const yAt = v => padT + cH * (1 - (v - minV) / span);
 
-      // Valor encima
-      ctx.fillStyle = lineColor;
-      ctx.font = `600 ${Math.min(9, bW * 0.9)}px Inter,sans-serif`;
-      ctx.textAlign = 'center';
-      const vLabel = Math.abs(s.val) >= 1000 ? s.val.toFixed(0) : s.val.toFixed(2);
-      ctx.fillText(vLabel, x + bW / 2, y - 2);
+    ctx.beginPath();
+    ctx.moveTo(xAt(0), padT + cH);
+    data.forEach((v, i) => ctx.lineTo(xAt(i), yAt(v)));
+    ctx.lineTo(xAt(data.length - 1), padT + cH);
+    ctx.closePath();
+    ctx.fillStyle = fillColor;
+    ctx.fill();
 
-      // Label abajo
-      ctx.fillStyle = textColor;
-      ctx.font = `500 9px Inter,sans-serif`;
-      ctx.fillText(s.label, x + bW / 2, H - 7);
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      if (i === 0) ctx.moveTo(xAt(i), yAt(v));
+      else ctx.lineTo(xAt(i), yAt(v));
     });
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
 
-    // Eje Y labels (min / max)
+    // axis labels
     ctx.fillStyle = textColor;
-    ctx.font = '500 8.5px Inter,sans-serif';
+    ctx.font = '500 9px Inter,sans-serif';
     ctx.textAlign = 'right';
     const fmtAxis = v => Math.abs(v) >= 1000 ? v.toFixed(0) : v.toFixed(2);
     ctx.fillText(fmtAxis(maxV), padL - 3, padT + 4);
     ctx.fillText(fmtAxis(minV), padL - 3, padT + cH);
+
+    ctx.textAlign = 'center';
+    ctx.fillText(`n=${data.length}`, padL + cW / 2, H - 4);
+  }
+
+  function tcDrawCorrelogram(wrap, title, coefs, banda) {
+    const canvas = tcMakeCanvas(wrap, title, 130);
+    const { ctx, W, H } = tcSetupCanvas(canvas, 130);
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const barColor = title === 'PACF' ? '#f59e0b' : '#38bdf8';
+    const textColor = isDark ? '#888' : '#999';
+    const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+    const bandColor = 'rgba(248,113,113,0.55)';
+
+    const padL = 38, padR = 8, padT = 10, padB = 22;
+    const cW = W - padL - padR;
+    const cH = H - padT - padB;
+
+    ctx.clearRect(0, 0, W, H);
+
+    if (!coefs || coefs.length === 0) {
+      ctx.fillStyle = textColor;
+      ctx.font = '500 11px Inter,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Sin coeficientes para graficar', W / 2, H / 2);
+      return;
+    }
+
+    // Excluimos lag 0 (siempre = 1) para que las bandas se vean
+    const data = coefs.slice(1);
+    const N = data.length;
+    if (N === 0) return;
+
+    const maxAbs = Math.max(1, ...data.map(v => Math.abs(v)), Math.abs(banda || 0));
+    const minV = -maxAbs, maxV = maxAbs;
+    const span = maxV - minV;
+
+    const yZero = padT + cH * (1 - (0 - minV) / span);
+
+    // grid
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 1;
+    [0, 0.5, 1].forEach(t => {
+      const y = padT + cH * (1 - t);
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + cW, y); ctx.stroke();
+    });
+
+    // bandas de confianza
+    if (banda && banda > 0) {
+      const yBandUp = padT + cH * (1 - (banda - minV) / span);
+      const yBandDn = padT + cH * (1 - (-banda - minV) / span);
+      ctx.fillStyle = 'rgba(248,113,113,0.08)';
+      ctx.fillRect(padL, yBandUp, cW, yBandDn - yBandUp);
+      ctx.strokeStyle = bandColor;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(padL, yBandUp); ctx.lineTo(padL + cW, yBandUp); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(padL, yBandDn); ctx.lineTo(padL + cW, yBandDn); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // eje cero
+    ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)';
+    ctx.beginPath(); ctx.moveTo(padL, yZero); ctx.lineTo(padL + cW, yZero); ctx.stroke();
+
+    // barras
+    const slot = cW / N;
+    const bW = Math.max(2, Math.min(8, slot * 0.55));
+    data.forEach((v, i) => {
+      const x = padL + slot * i + slot / 2 - bW / 2;
+      const y = padT + cH * (1 - (v - minV) / span);
+      const h = yZero - y;
+      const insideBand = banda && Math.abs(v) <= banda;
+      ctx.fillStyle = insideBand ? (isDark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.2)') : barColor;
+      ctx.fillRect(x, Math.min(y, yZero), bW, Math.abs(h));
+    });
+
+    // ejes
+    ctx.fillStyle = textColor;
+    ctx.font = '500 9px Inter,sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(maxV.toFixed(2), padL - 3, padT + 4);
+    ctx.fillText('0', padL - 3, yZero + 3);
+    ctx.fillText(minV.toFixed(2), padL - 3, padT + cH);
+
+    ctx.textAlign = 'center';
+    ctx.fillText('lag 1', padL + slot / 2, H - 6);
+    ctx.fillText('lag ' + N, padL + slot * (N - 1) + slot / 2, H - 6);
   }
 
   loadTools();
@@ -2062,15 +2620,18 @@
       } else {
         myAiEl.innerHTML = '';
 
-        if (data.tool_result) {
-          const resultEl = buildToolCardEl(data.tool_result);
-          resultEl.style.opacity = '0';
-          resultEl.style.transform = 'translateY(8px)';
-          resultEl.style.transition = 'opacity .25s, transform .25s';
-          myAiEl.appendChild(resultEl);
+        const toolCards = Array.isArray(data.tool_results) && data.tool_results.length
+          ? data.tool_results
+          : (data.tool_result ? [data.tool_result] : []);
+        if (toolCards.length > 0) {
+          const groupEl = buildToolGroupEl(toolCards);
+          groupEl.style.opacity = '0';
+          groupEl.style.transform = 'translateY(8px)';
+          groupEl.style.transition = 'opacity .25s, transform .25s';
+          myAiEl.appendChild(groupEl);
           requestAnimationFrame(() => {
-            resultEl.style.opacity = '1';
-            resultEl.style.transform = 'translateY(0)';
+            groupEl.style.opacity = '1';
+            groupEl.style.transform = 'translateY(0)';
           });
         }
 
