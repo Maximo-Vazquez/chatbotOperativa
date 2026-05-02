@@ -1,119 +1,59 @@
 """
-Definición y ejecución de herramientas disponibles para el chatbot.
+Carga y ejecución de herramientas disponibles para el chatbot.
 
-Para agregar una herramienta nueva:
-1. Definir su schema en TOOL_DEFINITIONS (formato OpenAI function calling).
-2. Agregar su implementación en TOOL_REGISTRY con el mismo nombre.
+Cada archivo Python dentro de ``apps/herramientas/tools/`` representa una
+herramienta y debe exponer:
+- TOOL_DEFINITION: esquema para function calling de OpenAI.
+- TOOL_META: metadatos para el frontend.
+- TOOL_FUNCTION: función ejecutable de la herramienta.
 """
 
-import statistics
-import math
+import importlib.util
+from pathlib import Path
 
-# ─────────────────────────────────────────────
-# DEFINICIONES (schemas que se envían a la API)
-# ─────────────────────────────────────────────
+
+CARPETA_HERRAMIENTAS = Path(__file__).with_name("tools")
+
+
+def _cargar_modulos_de_herramientas():
+    modulos = []
+    if not CARPETA_HERRAMIENTAS.exists():
+        return modulos
+
+    for ruta in sorted(CARPETA_HERRAMIENTAS.glob("*.py")):
+        if ruta.name.startswith("_"):
+            continue
+
+        nombre_modulo = f"apps.herramientas.herramientas_dinamicas.{ruta.stem}"
+        especificacion = importlib.util.spec_from_file_location(nombre_modulo, ruta)
+        if especificacion is None or especificacion.loader is None:
+            continue
+
+        modulo = importlib.util.module_from_spec(especificacion)
+        especificacion.loader.exec_module(modulo)
+        modulos.append(modulo)
+
+    return modulos
+
+
+_MODULOS_HERRAMIENTAS = _cargar_modulos_de_herramientas()
 
 TOOL_DEFINITIONS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "analizar_serie_temporal",
-            "description": (
-                "Analiza estadísticamente una serie temporal numérica. "
-                "Calcula media, mediana, desvío estándar, mínimo, máximo, "
-                "coeficiente de variación y detecta tendencia simple. "
-                "Úsala cuando el usuario quiera analizar o explorar una lista de valores numéricos."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "valores": {
-                        "type": "array",
-                        "items": {"type": "number"},
-                        "description": "Lista de valores numéricos de la serie temporal (al menos 3).",
-                    },
-                    "nombre_serie": {
-                        "type": "string",
-                        "description": "Nombre descriptivo de la serie (ej: 'ventas mensuales', 'temperatura diaria').",
-                    },
-                    "periodo": {
-                        "type": "string",
-                        "enum": ["diario", "semanal", "mensual", "trimestral", "anual", "otro"],
-                        "description": "Frecuencia de los datos.",
-                    },
-                },
-                "required": ["valores", "nombre_serie"],
-            },
-        },
-    },
+    modulo.TOOL_DEFINITION
+    for modulo in _MODULOS_HERRAMIENTAS
+    if hasattr(modulo, "TOOL_DEFINITION")
 ]
 
-# Mapeo rápido para el frontend: nombre → etiqueta y descripción corta
 TOOL_META = {
-    "analizar_serie_temporal": {
-        "label": "Analizador de Serie",
-        "description": "Estadísticas y tendencia de una lista de valores",
-        "icon": "bx-line-chart",
-        "color": "#818cf8",
-    },
+    modulo.TOOL_DEFINITION["function"]["name"]: modulo.TOOL_META
+    for modulo in _MODULOS_HERRAMIENTAS
+    if hasattr(modulo, "TOOL_DEFINITION") and hasattr(modulo, "TOOL_META")
 }
 
-
-# ─────────────────────────────────────────────
-# IMPLEMENTACIONES
-# ─────────────────────────────────────────────
-
-def _ejecutar_analizar_serie_temporal(valores: list, nombre_serie: str, periodo: str = "otro") -> dict:
-    n = len(valores)
-    if n < 3:
-        return {"error": "Se necesitan al menos 3 valores para analizar la serie."}
-
-    media = statistics.mean(valores)
-    mediana = statistics.median(valores)
-    desv = statistics.stdev(valores) if n > 1 else 0
-    minimo = min(valores)
-    maximo = max(valores)
-    rango = maximo - minimo
-    cv = (desv / media * 100) if media != 0 else None
-
-    # Tendencia simple: regresión lineal mínimos cuadrados
-    x_mean = (n - 1) / 2
-    numerador = sum((i - x_mean) * (v - media) for i, v in enumerate(valores))
-    denominador = sum((i - x_mean) ** 2 for i in range(n))
-    pendiente = numerador / denominador if denominador != 0 else 0
-
-    if abs(pendiente) < desv * 0.05:
-        tendencia = "estable (sin tendencia clara)"
-    elif pendiente > 0:
-        tendencia = f"creciente (pendiente ≈ {pendiente:.4f} por período)"
-    else:
-        tendencia = f"decreciente (pendiente ≈ {pendiente:.4f} por período)"
-
-    # Detección básica de outliers (más de 2 desvíos)
-    outliers = [round(v, 4) for v in valores if abs(v - media) > 2 * desv]
-
-    return {
-        "nombre_serie": nombre_serie,
-        "periodo": periodo,
-        "n_observaciones": n,
-        "media": round(media, 4),
-        "mediana": round(mediana, 4),
-        "desv_estandar": round(desv, 4),
-        "minimo": round(minimo, 4),
-        "maximo": round(maximo, 4),
-        "rango": round(rango, 4),
-        "coef_variacion_pct": round(cv, 2) if cv is not None else None,
-        "tendencia": tendencia,
-        "outliers_potenciales": outliers,
-    }
-
-
-# ─────────────────────────────────────────────
-# DISPATCHER
-# ─────────────────────────────────────────────
-
 TOOL_REGISTRY = {
-    "analizar_serie_temporal": _ejecutar_analizar_serie_temporal,
+    modulo.TOOL_DEFINITION["function"]["name"]: modulo.TOOL_FUNCTION
+    for modulo in _MODULOS_HERRAMIENTAS
+    if hasattr(modulo, "TOOL_DEFINITION") and hasattr(modulo, "TOOL_FUNCTION")
 }
 
 
