@@ -253,16 +253,23 @@ def chat_api(request):
         choice = response.choices[0]
         last_response = response  # se actualiza si hay segunda llamada
 
-        tool_result_data = None  # datos para el frontend si se usó herramienta
+        tool_result_data = None  # ultima herramienta (compatibilidad frontend)
+        tool_results_all = []  # todas las herramientas usadas en la respuesta
 
-        # ── Ciclo tool use ──
-        if supports_tools and choice.finish_reason == "tool_calls":
+        # ── Ciclo tool use: hasta MAX_TOOL_ITERS pasadas encadenadas ──
+        MAX_TOOL_ITERS = 9
+        iteraciones = 0
+        while (
+            supports_tools
+            and choice.finish_reason == "tool_calls"
+            and iteraciones < MAX_TOOL_ITERS
+        ):
+            iteraciones += 1
             tool_calls = choice.message.tool_calls
 
             # Agregar el mensaje del asistente con las tool_calls
             messages.append(choice.message)
 
-            tool_results_for_history = []
             for tc in tool_calls:
                 fn_name = tc.function.name
                 try:
@@ -281,13 +288,12 @@ def chat_api(request):
                         output_data=result,
                     )
 
-                # Acumular para la respuesta al frontend
                 tool_result_data = {
                     "tool_name": fn_name,
                     "input": fn_args,
                     "output": result,
                 }
-                tool_results_for_history.append(tool_result_data)
+                tool_results_all.append(tool_result_data)
 
                 # Agregar resultado de la herramienta a los mensajes
                 messages.append({
@@ -296,10 +302,20 @@ def chat_api(request):
                     "content": json.dumps(result, ensure_ascii=False),
                 })
 
-            # Segunda llamada: el modelo interpreta los resultados
-            response2 = client.chat.completions.create(**_completion_kwargs(model, messages, params))
-            last_response = response2
-            assistant_message = _strip_dsml_blocks((response2.choices[0].message.content or "").strip())
+            # Siguiente llamada: el modelo puede pedir más herramientas o cerrar.
+            # En la última iteración permitida, deshabilitamos tools para forzar respuesta final.
+            permitir_mas_tools = iteraciones < MAX_TOOL_ITERS
+            response_iter = client.chat.completions.create(
+                **_completion_kwargs(model, messages, params, include_tools=permitir_mas_tools)
+            )
+            last_response = response_iter
+            choice = response_iter.choices[0]
+
+        if supports_tools and tool_results_all:
+            assistant_message = _strip_dsml_blocks((choice.message.content or "").strip())
+        elif supports_tools and choice.finish_reason == "tool_calls":
+            # Salimos por tope sin haber procesado: forzamos mensaje informativo
+            assistant_message = (choice.message.content or "").strip()
         else:
             assistant_message = (choice.message.content or "").strip()
 
@@ -372,6 +388,8 @@ def chat_api(request):
     response_payload = {"response": assistant_message}
     if tool_result_data:
         response_payload["tool_result"] = tool_result_data
+    if tool_results_all:
+        response_payload["tool_results"] = tool_results_all
 
     usage_payload = _build_usage_payload(last_response, model)
     response_payload["usage"] = usage_payload
