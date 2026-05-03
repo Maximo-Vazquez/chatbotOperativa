@@ -45,6 +45,7 @@
       --send-bg: #e8e8e8;
       --send-color: #0d0d0d;
       --send-off: #333;
+      --send-border: transparent;
       --scrollbar: #5a5a5a;
       --scrollbar-hover: #7a7a7a;
       --scrollbar-track: rgba(255,255,255,0.04);
@@ -68,6 +69,11 @@
       --inline-code-bg: rgba(255,255,255,0.08);
       --table-border: #333;
       --table-head: #232323;
+      --tool-body-text: #cfd8d3;
+      --tool-label-text: #b8c4be;
+      --tool-section-text: #d1d5db;
+      --tool-action-text: #c7d2cc;
+      --tool-tab-text: #d5ddd9;
     }
     :root[data-theme="light"] {
       --bg-sidebar: #f5f5f5;
@@ -81,9 +87,10 @@
       --text-muted: #aaa;
       --border: #e4e4e4;
       --border-strong: #d4d4d4;
-      --send-bg: #111;
-      --send-color: #fff;
-      --send-off: #d8d8d8;
+      --send-bg: #fff;
+      --send-color: #111;
+      --send-off: #eeeeee;
+      --send-border: #d4d4d4;
       --scrollbar: #b0b0b0;
       --scrollbar-hover: #888;
       --scrollbar-track: rgba(0,0,0,0.04);
@@ -107,6 +114,11 @@
       --inline-code-bg: rgba(0,0,0,0.06);
       --table-border: #ddd;
       --table-head: #f0f0f0;
+      --tool-body-text: #374151;
+      --tool-label-text: #4b5563;
+      --tool-section-text: #374151;
+      --tool-action-text: #4b5563;
+      --tool-tab-text: #374151;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -308,8 +320,8 @@
     .ctx-gauge-popover {
       position: absolute; bottom: calc(100% + 8px); right: 0;
       min-width: 220px; padding: 10px 12px;
-      background: var(--bg-secondary, #1f2230); color: var(--text-primary);
-      border: 1px solid var(--border); border-radius: 10px;
+      background: var(--modal-bg); color: var(--text-primary);
+      border: 1px solid var(--modal-border); border-radius: 10px;
       box-shadow: 0 8px 24px rgba(0,0,0,.25);
       font-size: .72rem; line-height: 1.45; z-index: 50;
       opacity: 0; pointer-events: none; transform: translateY(4px);
@@ -327,8 +339,9 @@
 
     /* Botón enviar en modo "stop" mientras procesa (estilo ChatGPT) */
     .send-btn.stop-mode {
-      background: var(--text-primary, #fff) !important;
-      color: var(--bg-primary, #000) !important;
+      background: var(--send-bg) !important;
+      color: var(--send-color) !important;
+      border-color: var(--send-border) !important;
       opacity: 1 !important;
       cursor: pointer !important;
     }
@@ -528,12 +541,12 @@
     .chat-input::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 2px; }
     .input-bottom-row { display: flex; align-items: center; }
     .send-btn {
-      width: 32px; height: 32px; border-radius: 8px; border: none;
+      width: 32px; height: 32px; border-radius: 8px; border: 1px solid transparent;
       background: var(--send-off); color: var(--text-muted);
       cursor: default; display: flex; align-items: center; justify-content: center;
       flex-shrink: 0; transition: background .13s, color .13s;
     }
-    .send-btn.active { background: var(--send-bg); color: var(--send-color); cursor: pointer; }
+    .send-btn.active { background: var(--send-bg); color: var(--send-color); border-color: var(--send-border); cursor: pointer; }
     .send-btn.active:hover { opacity: .82; }
     .input-hint { max-width: 760px; margin: 5px auto 0; font-size: .68rem; color: var(--text-muted); text-align: center; }
 
@@ -791,10 +804,10 @@
     }
     @keyframes tcBar { 0%{transform:translateX(-200%)} 100%{transform:translateX(600%)} }
 
-    .tool-card-body { padding: 10px 13px; }
+    .tool-card-body { padding: 10px 13px; color: var(--tool-body-text); }
     .tool-card-section {
       font-size: .68rem; font-weight: 700;
-      color: var(--text-muted); text-transform: uppercase;
+      color: var(--tool-section-text); text-transform: uppercase;
       letter-spacing: .07em; margin-bottom: 5px; margin-top: 8px;
     }
     .tool-card-section:first-child { margin-top: 0; }
@@ -805,7 +818,7 @@
       display: flex; flex-direction: column; gap: 1px;
     }
     .tool-card-key {
-      font-size: .68rem; color: var(--text-muted); font-weight: 500;
+      font-size: .68rem; color: var(--tool-label-text); font-weight: 600;
     }
     .tool-card-val {
       display: flex; align-items: center; gap: 4px;
@@ -816,7 +829,7 @@
     .tool-card-val.warn { color: #f59e0b; }
     .tc-copy-val {
       opacity: 0; background: none; border: none; cursor: pointer;
-      color: var(--text-muted); padding: 0 2px; font-size: .72rem;
+      color: var(--tool-action-text); padding: 0 2px; font-size: .72rem;
       transition: color .12s, opacity .12s; line-height: 1; flex-shrink: 0;
     }
     .tool-card-row:hover .tc-copy-val { opacity: 1; }
@@ -833,6 +846,9 @@
     .tool-chip.none {
       background: var(--accent-green-bg); color: var(--accent-green);
     }
+    :root[data-theme="dark"] .tool-chip[style*="#a855f7"] { color: #d8b4fe !important; }
+    :root[data-theme="dark"] .tool-chip[style*="#0ea5e9"] { color: #7dd3fc !important; }
+    :root[data-theme="dark"] .tool-chip[style*="#ec4899"] { color: #f9a8d4 !important; }
 
     /* expand / chart */
     .tool-card-footer {
@@ -843,7 +859,7 @@
     .tc-expand-btn, .tc-copy-all-btn {
       display: inline-flex; align-items: center; gap: 5px;
       background: none; border: none; cursor: pointer; font-family: inherit;
-      font-size: .72rem; font-weight: 600; color: var(--text-muted);
+      font-size: .72rem; font-weight: 700; color: var(--tool-action-text);
       padding: 2px 6px; border-radius: 6px; transition: color .12s, background .12s;
     }
     .tc-expand-btn:hover, .tc-copy-all-btn:hover { color: var(--accent-purple); background: rgba(16,185,129,0.1); }
@@ -860,7 +876,7 @@
     .tool-card-header { cursor: pointer; user-select: none; }
     .tool-card-header:hover { background: rgba(16,185,129,0.06); }
     .tc-collapse-arrow {
-      margin-left: auto; font-size: 1.05rem; color: var(--text-muted);
+      margin-left: auto; font-size: 1.05rem; color: var(--tool-action-text);
       transition: transform .18s ease;
     }
     .tool-card.collapsed .tc-collapse-arrow { transform: rotate(180deg); }
@@ -904,7 +920,7 @@
     }
     .tg-tab {
       display: inline-flex; align-items: center; gap: 5px;
-      font-size: .7rem; font-weight: 600; color: var(--text-secondary);
+      font-size: .7rem; font-weight: 700; color: var(--tool-tab-text);
       background: var(--bg-elevated);
       border: 1px solid rgba(16,185,129,0.18);
       cursor: pointer; font-family: inherit;
@@ -948,7 +964,7 @@
     }
     .tools-used-badge .tu-chip {
       display: inline-flex; align-items: center; gap: 5px;
-      font-size: .72rem; font-weight: 600; color: var(--text-secondary);
+      font-size: .72rem; font-weight: 700; color: var(--tool-tab-text);
       background: var(--bg-elevated); padding: 3px 9px 3px 4px;
       border-radius: 14px; border: 1px solid rgba(16,185,129,0.18);
     }
@@ -1647,7 +1663,7 @@
   </svg>`;
 
   function getLoadingLabel() {
-    return currentModel === REASONING_MODEL ? 'Pensando...' : 'Escribiendo...';
+    return currentModel === REASONING_MODEL ? 'Pensando' : 'Escribiendo';
   }
 
   function addAI(htmlContent, typing = false) {
@@ -1672,13 +1688,6 @@
     const allow = on && !(typeof ctxFull !== 'undefined' && ctxFull);
     sendBtn.disabled = !allow;
     sendBtn.classList.toggle('active', allow);
-  }
-
-  // Cargar historial previo
-  if (history.length) {
-    hideEmpty();
-    history.forEach(item => { addUser(item.user); addAI(renderMD(item.assistant)); });
-    scrollEnd();
   }
 
   function autosizeInput() {
@@ -2248,6 +2257,32 @@
   }
 
   // ── Copiar valor individual ──
+  // Render de mensajes guardados con resultados de herramientas.
+  function renderAssistantMessage(assistantText, toolResults = []) {
+    const aiEl = addAI('', false);
+    aiEl.innerHTML = '';
+
+    if (Array.isArray(toolResults) && toolResults.length > 0) {
+      aiEl.appendChild(buildToolGroupEl(toolResults));
+    }
+
+    const textDiv = document.createElement('div');
+    textDiv.innerHTML = renderMD(assistantText || 'Sin respuesta.');
+    aiEl.appendChild(textDiv);
+    return aiEl;
+  }
+
+  // Cargar historial previo. Si hubo herramientas, reconstruir sus cards.
+  if (history.length) {
+    hideEmpty();
+    history.forEach(item => {
+      addUser(item.user);
+      renderAssistantMessage(item.assistant, item.tool_results || []);
+    });
+    scrollEnd();
+  }
+
+  // Copiar valor individual.
   function tcCopyVal(btn) {
     const val = btn.dataset.copy || '';
     navigator.clipboard.writeText(val).then(() => {
