@@ -168,6 +168,9 @@ jobs:
             echo "Configurando APP_VERSION=${{ steps.resolve_image.outputs.image_tag }} en el deployment..."
             run_kubectl set env deployment/chatbot-operativa-deployment APP_VERSION="${{ steps.resolve_image.outputs.image_tag }}"
 
+            echo "Limitando historial de revisiones del deployment..."
+            run_kubectl patch deployment chatbot-operativa-deployment --type=merge -p '{"spec":{"revisionHistoryLimit":5}}'
+
             echo "Reiniciando deployment chatbot-operativa..."
             run_kubectl rollout restart deployment/chatbot-operativa-deployment
             run_kubectl rollout status deployment/chatbot-operativa-deployment --timeout=300s
