@@ -6,6 +6,7 @@ metadata:
   labels:
     app: chatbot-operativa
 spec:
+  revisionHistoryLimit: 5
   replicas: 1
   selector:
     matchLabels:
