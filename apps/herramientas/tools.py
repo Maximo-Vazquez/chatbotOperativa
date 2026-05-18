@@ -57,14 +57,41 @@ TOOL_REGISTRY = {
 }
 
 
+def _to_json_safe(value):
+    """Convierte recursivamente tipos numpy/pandas a tipos nativos JSON serializables."""
+    # bool primero: en Python bool es subclase de int, hay que chequearlo antes
+    if isinstance(value, bool):
+        return bool(value)
+    if value is None or isinstance(value, (str, int, float)):
+        return value
+    # numpy/pandas escalares exponen .item()
+    if hasattr(value, "item") and not isinstance(value, (list, tuple, dict)):
+        try:
+            return _to_json_safe(value.item())
+        except Exception:
+            pass
+    if isinstance(value, dict):
+        return {str(k): _to_json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_to_json_safe(v) for v in value]
+    # numpy arrays
+    if hasattr(value, "tolist"):
+        try:
+            return _to_json_safe(value.tolist())
+        except Exception:
+            pass
+    return str(value)
+
+
 def ejecutar_herramienta(nombre: str, argumentos: dict) -> dict:
     """Ejecuta la herramienta con el nombre dado y devuelve el resultado."""
     fn = TOOL_REGISTRY.get(nombre)
     if fn is None:
         return {"error": f"Herramienta '{nombre}' no encontrada."}
     try:
-        return fn(**argumentos)
+        resultado = fn(**argumentos)
     except TypeError as e:
         return {"error": f"Argumentos inválidos para '{nombre}': {e}"}
     except Exception as e:
         return {"error": f"Error al ejecutar '{nombre}': {e}"}
+    return _to_json_safe(resultado)

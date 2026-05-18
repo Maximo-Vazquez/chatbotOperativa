@@ -28,6 +28,19 @@ class ChatbotViewsTests(TestCase):
 
         self.assertEqual(_clean_history(raw_history), raw_history)
 
+    def test_clean_history_preserves_tool_results(self):
+        raw_history = [{
+            "user": "u",
+            "assistant": "a",
+            "tool_results": [{
+                "tool_name": "acf",
+                "input": {"serie": [1, 2, 3]},
+                "output": {"ok": True},
+            }],
+        }]
+
+        self.assertEqual(_clean_history(raw_history), raw_history)
+
     @patch("apps.chatbot.views.OpenAI")
     @patch("apps.chatbot.views.settings.DEEPSEEK_API_KEY", "dummy-key")
     def test_chat_api_returns_response(self, mock_openai):
@@ -51,6 +64,49 @@ class ChatbotViewsTests(TestCase):
         data = response.json()
         self.assertEqual(data["response"], "respuesta de prueba")
         self.assertIn("usage", data)
+
+    @patch("apps.chatbot.views.ejecutar_herramienta", return_value={"ok": True})
+    @patch("apps.chatbot.views.OpenAI")
+    @patch("apps.chatbot.views.settings.DEEPSEEK_API_KEY", "dummy-key")
+    def test_chat_api_saves_tool_results_in_history(self, mock_openai, mock_tool):
+        self.client.force_login(self.user)
+
+        first_result = type("obj", (), {})()
+        first_choice = type("obj", (), {})()
+        first_choice.finish_reason = "tool_calls"
+        tool_call = type("obj", (), {})()
+        tool_call.id = "call_1"
+        tool_call.function = type("obj", (), {
+            "name": "acf",
+            "arguments": "{\"serie\": [1, 2, 3]}",
+        })()
+        first_choice.message = type("obj", (), {
+            "content": "",
+            "tool_calls": [tool_call],
+        })()
+        first_result.choices = [first_choice]
+
+        second_result = type("obj", (), {})()
+        second_choice = type("obj", (), {})()
+        second_choice.finish_reason = "stop"
+        second_choice.message = type("obj", (), {"content": "respuesta con herramienta"})()
+        second_result.choices = [second_choice]
+
+        mock_client = mock_openai.return_value
+        mock_client.chat.completions.create.side_effect = [first_result, second_result]
+
+        response = self.client.post(
+            reverse("chat_api"),
+            data="{\"message\": \"hola\"}",
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        history = self.client.session["chat_history"]
+        self.assertEqual(history[0]["assistant"], "respuesta con herramienta")
+        self.assertEqual(history[0]["tool_results"][0]["tool_name"], "acf")
+        self.assertEqual(history[0]["tool_results"][0]["output"], {"ok": True})
+        mock_tool.assert_called_once_with("acf", {"serie": [1, 2, 3]})
 
     def test_completion_kwargs_disables_thinking_for_standard_model(self):
         kwargs = _completion_kwargs(

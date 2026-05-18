@@ -6,6 +6,7 @@ metadata:
   labels:
     app: chatbot-operativa
 spec:
+  revisionHistoryLimit: 5
   replicas: 1
   selector:
     matchLabels:
@@ -29,6 +30,13 @@ spec:
           imagePullPolicy: Always
           workingDir: /app
           command: ["python", "manage.py", "migrate", "--noinput"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
           env:
             - name: DJANGO_SETTINGS_MODULE
               value: main.settings
@@ -88,9 +96,16 @@ spec:
           args:
             - |
               python manage.py collectstatic --noinput && \
-              gunicorn main.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120
+              gunicorn main.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 120 --max-requests 500 --max-requests-jitter 100
           ports:
             - containerPort: 8000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 750m
+              memory: 512Mi
           env:
             - name: DJANGO_SETTINGS_MODULE
               value: main.settings
@@ -152,6 +167,13 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 80
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
           volumeMounts:
             - name: shared-static-vol
               mountPath: /var/www/static
