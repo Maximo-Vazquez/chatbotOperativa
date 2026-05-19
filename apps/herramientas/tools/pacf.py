@@ -1,4 +1,5 @@
 import math
+import statistics
 
 
 TOOL_DEFINITION = {
@@ -64,6 +65,23 @@ def _ejecutar_pacf(
     n = len(valores)
     if n < 4:
         return {"error": "Se necesitan al menos 4 valores para calcular PACF."}
+
+    varianza = statistics.pvariance(valores)
+    if varianza == 0:
+        return {
+            "n_observaciones": n,
+            "lags": [0],
+            "pacf": [1.0],
+            "nivel_confianza": nivel_confianza,
+            "banda_confianza": round(_z_score(nivel_confianza) / math.sqrt(n), 6),
+            "rezagos_significativos": [],
+            "p_sugerido": 0,
+            "serie_constante": True,
+            "interpretacion": (
+                "La serie es constante y tiene varianza nula. La PACF no aporta "
+                "estructura autorregresiva identificable; no se sugiere AR(p)."
+            ),
+        }
 
     try:
         from statsmodels.tsa.stattools import pacf as statsmodels_pacf

@@ -1531,26 +1531,33 @@
     );
   }
 
-  function renderLatex(text) {
-    // Reemplaza fórmulas LaTeX con HTML de KaTeX antes de parsear markdown
-    // Orden: primero bloques ($$, \[), luego inline ($, \()
-    return text
-      .replace(/\$\$([\s\S]*?)\$\$/g, (_, f) => {
-        try { return katex.renderToString(f.trim(), { displayMode: true, throwOnError: false }); }
-        catch { return '$$' + f + '$$'; }
-      })
-      .replace(/\\\[([\s\S]*?)\\\]/g, (_, f) => {
-        try { return katex.renderToString(f.trim(), { displayMode: true, throwOnError: false }); }
-        catch { return '\\[' + f + '\\]'; }
-      })
-      .replace(/\$([^\n$]+?)\$/g, (_, f) => {
-        try { return katex.renderToString(f.trim(), { displayMode: false, throwOnError: false }); }
-        catch { return '$' + f + '$'; }
-      })
-      .replace(/\\\(([^\n]*?)\\\)/g, (_, f) => {
-        try { return katex.renderToString(f.trim(), { displayMode: false, throwOnError: false }); }
-        catch { return '\\(' + f + '\\)'; }
-      });
+  function protectLatex(text) {
+    const formulas = [];
+    const token = (f, displayMode, raw) => {
+      formulas.push({ f: f.trim(), displayMode, raw });
+      return '\x00MATH' + (formulas.length - 1) + '\x00';
+    };
+    const protectedText = text
+      .replace(/\$\$([\s\S]*?)\$\$/g, (_, f) => token(f, true, '$$' + f + '$$'))
+      .replace(/\\\[([\s\S]*?)\\\]/g, (_, f) => token(f, true, '\\[' + f + '\\]'))
+      .replace(/\$([^\n$]+?)\$/g, (_, f) => token(f, false, '$' + f + '$'))
+      .replace(/\\\(([^\n]*?)\\\)/g, (_, f) => token(f, false, '\\(' + f + '\\)'));
+    return { protectedText, formulas };
+  }
+
+  function restoreLatex(html, formulas) {
+    return html.replace(/\x00MATH(\d+)\x00/g, (_, i) => {
+      const item = formulas[+i];
+      if (!item) return '';
+      try {
+        return katex.renderToString(item.f, {
+          displayMode: item.displayMode,
+          throwOnError: false,
+        });
+      } catch {
+        return esc(item.raw);
+      }
+    });
   }
 
   function renderMD(text) {
@@ -1562,12 +1569,13 @@
           codeBlocks.push(m);
           return '\x00CODE' + (codeBlocks.length - 1) + '\x00';
         });
-      // 2. Renderizar LaTeX en el texto restante
-      const withLatex = renderLatex(withPlaceholders);
+      // 2. Proteger LaTeX para que marked no interprete el HTML de KaTeX como tabla/markdown
+      const { protectedText, formulas } = protectLatex(withPlaceholders);
       // 3. Restaurar bloques de código
-      const restored = withLatex.replace(/\x00CODE(\d+)\x00/g, (_, i) => codeBlocks[+i]);
-      // 4. Parsear markdown y mejorar bloques de código
-      return enhanceCodeBlocks(marked.parse(restored));
+      const restored = protectedText.replace(/\x00CODE(\d+)\x00/g, (_, i) => codeBlocks[+i]);
+      // 4. Parsear markdown, mejorar código y recién después insertar KaTeX
+      const html = enhanceCodeBlocks(marked.parse(restored));
+      return restoreLatex(html, formulas);
     } catch(e) {
       console.error('renderMD error:', e);
       return '<pre style="white-space:pre-wrap">' + text.replace(/</g,'&lt;') + '</pre>';
@@ -1868,6 +1876,7 @@
       body += tcRow('Q2 (mediana)', tcFmt(s.Q2));
       body += tcRow('Q3', tcFmt(s.Q3));
       body += tcRow('CV (%)', s.coef_variacion_pct);
+      body += tcRow('DispersiÃ³n', s.diagnostico_dispersion, {highlight: !!s.volatilidad_alta || !!s.es_constante});
       body += tcRow('Tendencia', s.tendencia_lineal, {highlight: true});
       body += '</div>';
 
