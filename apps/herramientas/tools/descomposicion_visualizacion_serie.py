@@ -100,6 +100,14 @@ def _ejecutar_descomposicion_visualizacion_serie(
     rango = maximo - minimo
     cv = (desv / media * 100) if media != 0 else None
     q1, q2, q3 = _quantiles_safe(valores)
+    es_constante = varianza == 0
+    volatilidad_alta = bool(cv is not None and cv >= 50)
+    if es_constante:
+        diagnostico_dispersion = "serie constante: varianza nula, sin dispersion"
+    elif volatilidad_alta:
+        diagnostico_dispersion = "alta volatilidad: dispersion elevada respecto de la media"
+    else:
+        diagnostico_dispersion = "dispersion moderada o baja respecto de la media"
 
     # Tendencia simple por regresion lineal (pendiente via numpy)
     pendiente = float(np.polyfit(np.arange(n), valores, 1)[0])
@@ -129,6 +137,9 @@ def _ejecutar_descomposicion_visualizacion_serie(
         "Q2": _round_or_none(q2),
         "Q3": _round_or_none(q3),
         "coef_variacion_pct": round(cv, 2) if cv is not None else None,
+        "es_constante": es_constante,
+        "volatilidad_alta": volatilidad_alta,
+        "diagnostico_dispersion": diagnostico_dispersion,
         "tendencia_lineal": tendencia_txt,
         "outliers_potenciales": outliers,
     }

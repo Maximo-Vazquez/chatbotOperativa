@@ -1,4 +1,5 @@
 import math
+import statistics
 
 
 TOOL_DEFINITION = {
@@ -64,6 +65,24 @@ def _ejecutar_acf(
     n = len(valores)
     if n < 3:
         return {"error": "Se necesitan al menos 3 valores para calcular ACF."}
+
+    varianza = statistics.pvariance(valores)
+    if varianza == 0:
+        return {
+            "n_observaciones": n,
+            "lags": [0],
+            "acf": [1.0],
+            "nivel_confianza": nivel_confianza,
+            "banda_confianza": round(_z_score(nivel_confianza) / math.sqrt(n), 6),
+            "rezagos_significativos": [],
+            "q_sugerido": 0,
+            "serie_constante": True,
+            "interpretacion": (
+                "La serie es constante y tiene varianza nula. No corresponde "
+                "calcular autocorrelaciones rho_k = gamma_k / gamma_0 porque "
+                "gamma_0 es 0; no se sugiere componente MA."
+            ),
+        }
 
     try:
         from statsmodels.tsa.stattools import acf as statsmodels_acf

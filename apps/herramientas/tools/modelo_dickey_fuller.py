@@ -1,3 +1,6 @@
+import statistics
+
+
 TOOL_DEFINITION = {
     "type": "function",
     "function": {
@@ -50,17 +53,81 @@ def _ejecutar_modelo_dickey_fuller(
     significancia: float = 0.05,
     regresion: str = "c",
 ) -> dict:
-    if len(valores) < 8:
-        return {"error": "Se recomiendan al menos 8 valores para aplicar Dickey-Fuller."}
+    n = len(valores)
+    if n < 4:
+        return {"error": "Se necesitan al menos 4 valores para evaluar estacionariedad."}
+
+    media = statistics.mean(valores)
+    varianza = statistics.pvariance(valores)
+    if varianza == 0:
+        return {
+            "estadistico_adf": None,
+            "p_value": None,
+            "lags_usados": 0,
+            "n_observaciones": n,
+            "criterio_aic": None,
+            "valores_criticos": {},
+            "significancia": significancia,
+            "regresion": regresion,
+            "es_estacionaria": True,
+            "serie_constante": True,
+            "muestra_corta": n < 8,
+            "decision": (
+                "La serie es constante: media constante, varianza nula y sin "
+                "tendencia. Se considera estacionaria en sentido practico/"
+                "degenerado; no corresponde aplicar ADF formal."
+            ),
+        }
 
     try:
         from statsmodels.tsa.stattools import adfuller
     except ImportError:
         return {"error": "Falta instalar statsmodels para usar esta herramienta."}
 
-    estadistico, p_value, used_lag, n_obs, critical_values, icbest = adfuller(
-        valores, autolag="AIC", regression=regresion
-    )
+    muestra_corta = n < 8
+    try:
+        if muestra_corta:
+            estadistico, p_value, used_lag, n_obs, critical_values = adfuller(
+                valores, maxlag=0, autolag=None, regression=regresion
+            )
+            icbest = None
+        else:
+            estadistico, p_value, used_lag, n_obs, critical_values, icbest = adfuller(
+                valores, autolag="AIC", regression=regresion
+            )
+    except Exception:
+        pendiente = (
+            (valores[-1] - valores[0]) / (n - 1)
+            if n > 1
+            else 0
+        )
+        desv = statistics.pstdev(valores)
+        umbral_pendiente = max(desv * 0.2, abs(media) * 0.01, 1e-9)
+        estacionaria_operativa = abs(pendiente) <= umbral_pendiente
+        return {
+            "estadistico_adf": None,
+            "p_value": None,
+            "lags_usados": 0,
+            "n_observaciones": n,
+            "criterio_aic": None,
+            "valores_criticos": {},
+            "significancia": significancia,
+            "regresion": regresion,
+            "es_estacionaria": estacionaria_operativa,
+            "muestra_corta": muestra_corta,
+            "diagnostico_operativo": True,
+            "pendiente_aproximada": round(float(pendiente), 6),
+            "decision": (
+                "No se pudo aplicar ADF formal de manera estable con esta "
+                "muestra corta. Por inspeccion operativa, la serie parece "
+                + (
+                    "aproximadamente estacionaria: no presenta tendencia clara."
+                    if estacionaria_operativa
+                    else "no estacionaria: presenta una tendencia clara."
+                )
+            ),
+        }
+
     p_value = float(p_value)
     estacionaria = bool(p_value < significancia)
 
@@ -81,11 +148,12 @@ def _ejecutar_modelo_dickey_fuller(
         "p_value": round(float(p_value), 6),
         "lags_usados": int(used_lag),
         "n_observaciones": int(n_obs),
-        "criterio_aic": round(float(icbest), 6),
+        "criterio_aic": round(float(icbest), 6) if icbest is not None else None,
         "valores_criticos": {k: round(float(v), 6) for k, v in critical_values.items()},
         "significancia": significancia,
         "regresion": regresion,
         "es_estacionaria": estacionaria,
+        "muestra_corta": muestra_corta,
         "decision": decision,
     }
 
