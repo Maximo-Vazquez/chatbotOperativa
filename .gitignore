@@ -3,11 +3,18 @@
 /media/
 /pruebas/
 /Documentacion/
+/staticfiles/
 
 *.sqlite3
+db.sqlite3
 **/__pycache__/
 *.pyc
 .env
 .env.*
+!.env.example
+k8s/id_deploy
+k8s/id_deploy.pub
+k8s/configuracion-nas.txt
+serve_django.py
 .claude
 .vscode

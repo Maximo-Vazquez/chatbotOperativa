@@ -158,6 +158,24 @@ spec:
                 secretKeyRef:
                   name: chatbot-operativa-app-secrets
                   key: GOOGLE_CLIENT_SECRET
+            - name: DEEPSEEK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot-operativa-app-secrets
+                  key: DEEPSEEK_API_KEY
+                  optional: true
+            - name: CLAVE_API_DEEPSEEK_INVITADO
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot-operativa-app-secrets
+                  key: CLAVE_API_DEEPSEEK_INVITADO
+                  optional: true
+            - name: DEEPSEEK_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: chatbot-operativa-app-secrets
+                  key: DEEPSEEK_BASE_URL
+                  optional: true
           volumeMounts:
             - name: shared-static-vol
               mountPath: /app/staticfiles

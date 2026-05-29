@@ -23,6 +23,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
   <!-- marked.js para markdown real -->
   <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
   <!-- highlight.js para syntax highlighting -->
   <link rel="stylesheet" id="hljs-dark-theme"  href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
   <link rel="stylesheet" id="hljs-light-theme" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" disabled>
@@ -1526,7 +1527,7 @@
         const cid = 'c' + (++_codeIdx);
         _codeStore[cid] = decoded;
         const displayLang = lang || 'código';
-        return `<div class="code-block-wrap"><div class="code-block-header"><span class="lang-label">${displayLang}</span><button class="copy-btn" onclick="copyCode(this,'${cid}')"><i class='bx bx-copy' style="font-size:.85rem"></i> Copiar</button></div><pre><code class="hljs">${highlighted}</code></pre></div>`;
+        return `<div class="code-block-wrap"><div class="code-block-header"><span class="lang-label">${esc(displayLang)}</span><button class="copy-btn" data-code-id="${cid}"><i class='bx bx-copy' style="font-size:.85rem"></i> Copiar</button></div><pre><code class="hljs">${highlighted}</code></pre></div>`;
       }
     );
   }
@@ -1555,6 +1556,9 @@
 
   function renderMD(text) {
     try {
+      if (!window.DOMPurify) {
+        return '<pre style="white-space:pre-wrap">' + esc(text) + '</pre>';
+      }
       // 1. Extraer y proteger bloques de código para que no se toque su contenido
       const codeBlocks = [];
       const withPlaceholders = text
@@ -1567,7 +1571,10 @@
       // 3. Restaurar bloques de código
       const restored = withLatex.replace(/\x00CODE(\d+)\x00/g, (_, i) => codeBlocks[+i]);
       // 4. Parsear markdown y mejorar bloques de código
-      return enhanceCodeBlocks(marked.parse(restored));
+      return enhanceCodeBlocks(DOMPurify.sanitize(marked.parse(restored), {
+        USE_PROFILES: { html: true },
+        ADD_ATTR: ['class']
+      }));
     } catch(e) {
       console.error('renderMD error:', e);
       return '<pre style="white-space:pre-wrap">' + text.replace(/</g,'&lt;') + '</pre>';
@@ -1587,6 +1594,12 @@
   }
 
   // ── CHAT ──
+  document.addEventListener('click', (event) => {
+    const btn = event.target.closest('.copy-btn[data-code-id]');
+    if (!btn) return;
+    copyCode(btn, btn.dataset.codeId);
+  });
+
   const chatWindow = document.getElementById('chat-window');
   const emptyState = document.getElementById('empty-state');
   const chatInput  = document.getElementById('chat-input');

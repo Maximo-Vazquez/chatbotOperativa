@@ -144,12 +144,16 @@ jobs:
             [[ -n "${{ secrets.GOOGLE_CLIENT_ID }}" ]] || { echo "Falta GOOGLE_CLIENT_ID en GitHub Secrets"; exit 1; }
             [[ -n "${{ secrets.GOOGLE_CLIENT_SECRET }}" ]] || { echo "Falta GOOGLE_CLIENT_SECRET en GitHub Secrets"; exit 1; }
             [[ -n "${{ secrets.DJANGO_SECRET_KEY }}" ]] || { echo "Falta DJANGO_SECRET_KEY en GitHub Secrets"; exit 1; }
+            [[ -n "${{ secrets.CLAVE_API_DEEPSEEK_INVITADO }}" ]] || { echo "Falta CLAVE_API_DEEPSEEK_INVITADO en GitHub Secrets"; exit 1; }
 
             echo "Sincronizando secret de aplicacion desde GitHub Secrets..."
             run_kubectl create secret generic chatbot-operativa-app-secrets \
               --from-literal=GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
               --from-literal=GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
               --from-literal=DJANGO_SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}" \
+              --from-literal=DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
+              --from-literal=CLAVE_API_DEEPSEEK_INVITADO="${{ secrets.CLAVE_API_DEEPSEEK_INVITADO }}" \
+              --from-literal=DEEPSEEK_BASE_URL="${{ vars.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1' }}" \
               --dry-run=client -o yaml | run_kubectl apply -f -
 
             echo "Aplicando manifiestos base..."
