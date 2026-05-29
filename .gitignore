@@ -12,8 +12,9 @@ db.sqlite3
 .env
 .env.*
 !.env.example
-k8s/id_deploy
-k8s/id_deploy.pub
+k8s/id_*
+k8s/*.key
+k8s/*.pub
 k8s/configuracion-nas.txt
 serve_django.py
 .claude
