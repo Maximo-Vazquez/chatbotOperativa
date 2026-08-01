@@ -9,6 +9,7 @@ herramienta y debe exponer:
 """
 
 import importlib.util
+import math
 from pathlib import Path
 
 
@@ -62,8 +63,10 @@ def _to_json_safe(value):
     # bool primero: en Python bool es subclase de int, hay que chequearlo antes
     if isinstance(value, bool):
         return bool(value)
-    if value is None or isinstance(value, (str, int, float)):
+    if value is None or isinstance(value, (str, int)):
         return value
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
     # numpy/pandas escalares exponen .item()
     if hasattr(value, "item") and not isinstance(value, (list, tuple, dict)):
         try:

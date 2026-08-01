@@ -163,6 +163,6 @@ CHATBOT_MODEL = os.environ.get("CHATBOT_MODEL", "deepseek-v4-flash").strip() or 
 CHATBOT_SYSTEM_PROMPT = os.environ.get("CHATBOT_SYSTEM_PROMPT", CHATBOT_7A_SYSTEM_PROMPT).strip()
 
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "").strip()
-CLAVE_API_DEEPSEEK_INVITADO = "sk-3cf2677b04e4472ab3c5e0c6c6f5b100"
+CLAVE_API_DEEPSEEK_INVITADO = os.environ.get("CLAVE_API_DEEPSEEK_INVITADO", "").strip()
 DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-flash").strip() or "deepseek-v4-flash"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"

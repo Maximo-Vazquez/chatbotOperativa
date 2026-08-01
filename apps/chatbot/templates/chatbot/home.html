@@ -1850,6 +1850,78 @@
     return n.toFixed(digits);
   }
 
+  // Helpers compartidos por los renderers de modelos de pronostico
+  // (modelo_ma, modelo_sarima, modelo_arimax, modelo_sarimax), que comparten
+  // la misma estructura de salida del nucleo `apps.herramientas.forecasting`.
+  function tcCoefChips(coefs, bg, fg) {
+    return Object.keys(coefs || {}).length === 0
+      ? `<span class="tool-chip none">—</span>`
+      : Object.entries(coefs).map(([k, v]) => `<span class="tool-chip" style="background:${bg};color:${fg}">${esc(k)}=${tcFmt(v)}</span>`).join('');
+  }
+
+  function tcResidualSection(out) {
+    const lb = out.ljung_box || {};
+    let body = tcSection('Validación de residuos (Ljung-Box)');
+    body += '<div class="tool-card-grid">';
+    body += tcRow('Estadístico LB', tcFmt(lb.estadistico));
+    body += tcRow('p-valor', tcFmt(lb.p_value, 6));
+    body += tcRow('Lags', lb.lags);
+    body += tcRow('Media residuos', tcFmt(out.media_residuos));
+    body += tcRow('Var. residuos', tcFmt(out.varianza_residuos));
+    body += tcRow('¿Ruido blanco?', lb.es_ruido_blanco ? 'SÍ' : 'NO', lb.es_ruido_blanco ? {ok: true} : {warn: true});
+    body += '</div>';
+    if (lb.interpretacion) {
+      body += `<div style="font-size:.78rem;color:${lb.es_ruido_blanco ? 'var(--accent-green)' : '#f59e0b'};padding:4px 0;font-weight:600">${esc(lb.interpretacion)}</div>`;
+    }
+    return body;
+  }
+
+  function tcEvaluationSection(out) {
+    const ev = out.evaluacion || {};
+    if (!ev.ejecutada) return '';
+    const m = ev.metricas_prueba || {};
+    let body = tcSection('Evaluación fuera de muestra (holdout)');
+    body += '<div class="tool-card-grid">';
+    body += tcRow('Observaciones de prueba', ev.n_prueba);
+    body += tcRow('MAE', tcFmt(m.mae));
+    body += tcRow('RMSE', tcFmt(m.rmse));
+    if (m.mape !== undefined && m.mape !== null) body += tcRow('MAPE (%)', tcFmt(m.mape, 2));
+    body += '</div>';
+    return body;
+  }
+
+  function tcForecastSection(out, bg, fg) {
+    let body = tcSection(`Pronóstico (${out.pasos_pronostico} paso${out.pasos_pronostico > 1 ? 's' : ''})`);
+    const fc = out.pronostico || [];
+    const fechas = out.fechas_pronostico || [];
+    const fcHTML = fc.length === 0
+      ? `<span class="tool-chip none">—</span>`
+      : fc.map((v, i) => `<span class="tool-chip" style="background:${bg};color:${fg};font-weight:700">${fechas[i] ? esc(fechas[i]) : 't+' + (i + 1)}: ${tcFmt(v)}</span>`).join('');
+    body += `<div class="tool-card-chips">${fcHTML}</div>`;
+
+    const intervalos = out.intervalos_pronostico || [];
+    if (intervalos.length > 0) {
+      body += tcSection(`Intervalos de predicción (${Math.round((out.nivel_confianza || 0.95) * 100)}%)`);
+      const intHTML = intervalos.map(iv =>
+        `<span class="tool-chip">${iv.fecha ? esc(iv.fecha) : 't+' + iv.paso}: [${tcFmt(iv.limite_inferior)}, ${tcFmt(iv.limite_superior)}]</span>`
+      ).join('');
+      body += `<div class="tool-card-chips">${intHTML}</div>`;
+    }
+    return body;
+  }
+
+  function tcWarningsSection(out) {
+    const adv = out.advertencias || [];
+    if (adv.length === 0) return '';
+    let body = tcSection('Advertencias');
+    body += adv.map(a => {
+      const sev = a.severidad || 'informacion';
+      const color = sev.startsWith('advertencia') || sev === 'error' ? '#f59e0b' : 'var(--text-secondary)';
+      return `<div style="font-size:.76rem;color:${color};padding:2px 0">• ${esc(a.mensaje || a.codigo || '')}</div>`;
+    }).join('');
+    return body;
+  }
+
   // Renderers por herramienta. Cada uno recibe `out` y devuelve { body, charts? }
   // body = HTML que se inserta en .tool-card-body
   // charts = (opcional) función(canvasContainer, out) que dibuja graficos al expandir
@@ -2134,6 +2206,146 @@
       return {
         body,
         charts: (wrap) => tcDrawLineChart(wrap, 'Pronóstico', fc),
+      };
+    },
+
+    modelo_ma(out) {
+      let body = tcSection('Modelo ajustado');
+      body += '<div class="tool-card-grid">';
+      body += tcRow('Modelo', out.modelo, {highlight: true});
+      body += tcRow('Representación interna', out.representacion_interna);
+      body += tcRow('Observaciones', out.n_observaciones);
+      body += tcRow('AIC', tcFmt(out.aic));
+      body += tcRow('BIC', tcFmt(out.bic));
+      body += tcRow('MSE residuos (in-sample)', tcFmt(out.mse_residuos));
+      body += '</div>';
+
+      body += tcSection('Coeficientes MA');
+      body += `<div class="tool-card-chips">${tcCoefChips(out.coeficientes_ma, 'rgba(139,92,246,.15)', '#8b5cf6')}</div>`;
+
+      body += tcResidualSection(out);
+      body += tcEvaluationSection(out);
+      body += tcForecastSection(out, 'rgba(139,92,246,.18)', '#8b5cf6');
+      body += tcWarningsSection(out);
+
+      return {
+        body,
+        charts: (wrap) => tcDrawLineChart(wrap, 'Pronóstico', out.pronostico || []),
+      };
+    },
+
+    modelo_sarima(out) {
+      const o = out.orden || {};
+      const oe = out.orden_estacional || {};
+      let body = tcSection('Modelo ajustado');
+      body += '<div class="tool-card-grid">';
+      body += tcRow('Modelo', out.modelo, {highlight: true});
+      body += tcRow('(p,d,q)', `(${o.p},${o.d},${o.q})`);
+      body += tcRow('(P,D,Q,s)', `(${oe.P},${oe.D},${oe.Q},${oe.s})`);
+      body += tcRow('Ciclos aproximados', out.n_ciclos_aproximados);
+      body += tcRow('Observaciones', out.n_observaciones);
+      body += tcRow('AIC', tcFmt(out.aic));
+      body += tcRow('BIC', tcFmt(out.bic));
+      body += tcRow('MSE residuos (in-sample)', tcFmt(out.mse_residuos));
+      body += '</div>';
+
+      body += tcSection('Coeficientes regulares');
+      body += `<div class="tool-card-chips">${tcCoefChips(out.coeficientes_regulares, 'rgba(236,72,153,.15)', '#ec4899')}</div>`;
+      body += tcSection('Coeficientes estacionales');
+      body += `<div class="tool-card-chips">${tcCoefChips(out.coeficientes_estacionales, 'rgba(16,185,129,.15)', '#10b981')}</div>`;
+
+      body += tcResidualSection(out);
+      body += tcEvaluationSection(out);
+      body += tcForecastSection(out, 'rgba(16,185,129,.18)', '#10b981');
+      body += tcWarningsSection(out);
+
+      return {
+        body,
+        charts: (wrap) => tcDrawLineChart(wrap, 'Pronóstico', out.pronostico || []),
+      };
+    },
+
+    modelo_arimax(out) {
+      const o = out.orden || {};
+      const vx = out.variables_exogenas || {};
+      const mc = out.diagnostico_multicolinealidad || {};
+      let body = tcSection('Modelo ajustado');
+      body += '<div class="tool-card-grid">';
+      body += tcRow('Modelo', out.modelo, {highlight: true});
+      body += tcRow('(p,d,q)', `(${o.p},${o.d},${o.q})`);
+      body += tcRow('Variables exógenas', (vx.nombres || []).join(', '));
+      body += tcRow('Observaciones', out.n_observaciones);
+      body += tcRow('AIC', tcFmt(out.aic));
+      body += tcRow('BIC', tcFmt(out.bic));
+      body += tcRow('MSE residuos (in-sample)', tcFmt(out.mse_residuos));
+      body += '</div>';
+
+      body += tcSection('Coeficientes exógenos');
+      body += `<div class="tool-card-chips">${tcCoefChips(out.coeficientes_exogenos, 'rgba(14,165,233,.15)', '#0ea5e9')}</div>`;
+
+      if (mc.clasificacion) {
+        body += tcSection('Multicolinealidad de exógenas');
+        body += '<div class="tool-card-grid">';
+        body += tcRow('Clasificación', mc.clasificacion, mc.clasificacion === 'sin_senales_relevantes' ? {ok: true} : {warn: true});
+        body += tcRow('Número de condición', tcFmt(mc.numero_condicion, 2));
+        body += '</div>';
+      }
+
+      body += tcResidualSection(out);
+      body += tcEvaluationSection(out);
+      body += tcForecastSection(out, 'rgba(14,165,233,.18)', '#0ea5e9');
+      body += tcWarningsSection(out);
+
+      return {
+        body,
+        charts: (wrap) => tcDrawLineChart(wrap, 'Pronóstico', out.pronostico || []),
+      };
+    },
+
+    modelo_sarimax(out) {
+      const o = out.orden || {};
+      const oe = out.orden_estacional || {};
+      const vx = out.variables_exogenas || {};
+      const mc = out.diagnostico_multicolinealidad || {};
+      let body = tcSection('Modelo ajustado');
+      body += '<div class="tool-card-grid">';
+      body += tcRow('Modelo', out.modelo, {highlight: true});
+      body += tcRow('Tipo detectado', out.tipo_modelo_detectado, {highlight: true});
+      body += tcRow('(p,d,q)', `(${o.p},${o.d},${o.q})`);
+      if (oe.s !== null && oe.s !== undefined) body += tcRow('(P,D,Q,s)', `(${oe.P},${oe.D},${oe.Q},${oe.s})`);
+      if (vx.utilizadas) body += tcRow('Variables exógenas', (vx.nombres || []).join(', '));
+      body += tcRow('Observaciones', out.n_observaciones);
+      body += tcRow('AIC', tcFmt(out.aic));
+      body += tcRow('BIC', tcFmt(out.bic));
+      body += tcRow('MSE residuos (in-sample)', tcFmt(out.mse_residuos));
+      body += '</div>';
+
+      body += tcSection('Coeficientes regulares');
+      body += `<div class="tool-card-chips">${tcCoefChips(out.coeficientes_regulares, 'rgba(236,72,153,.15)', '#ec4899')}</div>`;
+      if (oe.s !== null && oe.s !== undefined) {
+        body += tcSection('Coeficientes estacionales');
+        body += `<div class="tool-card-chips">${tcCoefChips(out.coeficientes_estacionales, 'rgba(16,185,129,.15)', '#10b981')}</div>`;
+      }
+      if (vx.utilizadas) {
+        body += tcSection('Coeficientes exógenos');
+        body += `<div class="tool-card-chips">${tcCoefChips(out.coeficientes_exogenos, 'rgba(14,165,233,.15)', '#0ea5e9')}</div>`;
+        if (mc.clasificacion) {
+          body += tcSection('Multicolinealidad de exógenas');
+          body += '<div class="tool-card-grid">';
+          body += tcRow('Clasificación', mc.clasificacion, mc.clasificacion === 'sin_senales_relevantes' ? {ok: true} : {warn: true});
+          body += tcRow('Número de condición', tcFmt(mc.numero_condicion, 2));
+          body += '</div>';
+        }
+      }
+
+      body += tcResidualSection(out);
+      body += tcEvaluationSection(out);
+      body += tcForecastSection(out, 'rgba(99,102,241,.18)', '#6366f1');
+      body += tcWarningsSection(out);
+
+      return {
+        body,
+        charts: (wrap) => tcDrawLineChart(wrap, 'Pronóstico', out.pronostico || []),
       };
     },
   };

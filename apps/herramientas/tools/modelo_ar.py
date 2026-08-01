@@ -1,4 +1,13 @@
-import numpy as np
+"""Fachada pública AR(p) sobre el núcleo estadístico compartido.
+
+Conserva el contrato histórico de ``modelo_ar`` y configura el motor como
+ARIMA(p,0,0), evitando una segunda implementación de ajuste, intervalos,
+advertencias y Ljung-Box.
+"""
+
+from apps.herramientas.forecasting import diagnostics, engine, validation
+from apps.herramientas.forecasting.exceptions import ForecastingError, InvalidOrderError
+from apps.herramientas.forecasting.serialization import serializar_parametro
 
 
 TOOL_DEFINITION = {
@@ -6,10 +15,8 @@ TOOL_DEFINITION = {
     "function": {
         "name": "modelo_ar",
         "description": (
-            "Ajusta un modelo Autorregresivo AR(p) sobre una serie "
-            "estacionaria. Estima la constante c y los coeficientes phi_1..phi_p, "
-            "calcula MSE/AIC/BIC, valida los residuos como ruido blanco "
-            "(Ljung-Box) y genera un pronostico para los siguientes pasos."
+            "Ajusta un modelo autorregresivo AR(p), internamente ARIMA(p,0,0), "
+            "y devuelve coeficientes, diagnóstico residual, pronóstico e intervalos."
         ),
         "parameters": {
             "type": "object",
@@ -22,13 +29,19 @@ TOOL_DEFINITION = {
                 "p": {
                     "type": "integer",
                     "minimum": 1,
-                    "description": "Orden autorregresivo (sugerido por la PACF).",
+                    "description": "Orden autorregresivo.",
                 },
                 "pasos_pronostico": {
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 50,
                     "description": "Cantidad de pasos a pronosticar (default 1).",
+                },
+                "nivel_confianza": {
+                    "type": "number",
+                    "minimum": 0.8,
+                    "maximum": 0.999,
+                    "description": "Nivel de confianza de los intervalos (default 0.95).",
                 },
             },
             "required": ["valores", "p"],
@@ -48,63 +61,99 @@ def _ejecutar_modelo_ar(
     valores: list,
     p: int,
     pasos_pronostico: int = 1,
+    nivel_confianza: float = 0.95,
 ) -> dict:
-    n = len(valores)
-    if n < p + 3:
-        return {"error": f"Se necesitan al menos {p + 3} observaciones para ajustar AR({p})."}
+    """Valida y ajusta AR(p) mediante el motor común.
 
+    Los errores de dominio se devuelven con ``codigo_error``. El último
+    ``except Exception`` es exclusivamente la frontera pública y nunca
+    expone trazas ni mensajes crudos de statsmodels.
+    """
     try:
-        from statsmodels.tsa.arima.model import ARIMA
-        from statsmodels.stats.diagnostic import acorr_ljungbox
-    except ImportError:
-        return {"error": "Falta instalar statsmodels para usar esta herramienta."}
+        validation.validar_orden_arima(p, 0, 0)
+        if p < 1:
+            raise InvalidOrderError("'p' debe ser al menos 1 para un modelo AR.")
 
-    modelo = ARIMA(valores, order=(p, 0, 0))
-    ajuste = modelo.fit()
+        serie = validation.validar_serie(valores)
+        validation.validar_serie_no_constante(serie)
+        validation.validar_muestra_minima(serie.size, p, 0, 0)
+        validation.validar_horizonte_pronostico(pasos_pronostico)
+        nivel_confianza = validation.validar_nivel_confianza(nivel_confianza)
 
-    params = ajuste.params
-    nombres_params = list(getattr(params, "index", [])) or [f"param_{i}" for i in range(len(params))]
+        resultado = engine.ajustar_arima(
+            serie=serie,
+            p=p,
+            d=0,
+            q=0,
+            con_constante=True,
+            pasos_pronostico=pasos_pronostico,
+            nivel_confianza=nivel_confianza,
+        )
+        diagnostico = diagnostics.construir_diagnostico_residuos(
+            resultado.residuos,
+            d=0,
+            p=p,
+            q=0,
+        )
+    except ForecastingError as exc:
+        return {"error": str(exc), "codigo_error": exc.codigo_error}
+    except Exception:
+        return {
+            "error": f"No fue posible ajustar el modelo AR({p}) con los datos proporcionados.",
+            "codigo_error": "ERROR_INESPERADO",
+        }
+
     coeficientes = {
-        str(nombre): round(float(valor), 6)
-        for nombre, valor in zip(nombres_params, np.asarray(params))
+        parametro.nombre: parametro.coeficiente
+        for parametro in resultado.parametros
     }
-
-    residuos = np.asarray(ajuste.resid, dtype=float)
-    mse = float(np.mean(residuos ** 2))
-
-    # Test de Ljung-Box (ruido blanco). lags acotado por la longitud de los residuos.
-    lb_lags = max(1, min(10, len(residuos) // 5))
-    lb = acorr_ljungbox(residuos, lags=[lb_lags], return_df=True)
-    lb_stat = float(lb["lb_stat"].iloc[0])
-    lb_pvalue = float(lb["lb_pvalue"].iloc[0])
-    es_ruido_blanco = bool(lb_pvalue > 0.05)
-
-    pronostico = ajuste.forecast(steps=pasos_pronostico)
-    pronostico_lista = [round(float(v), 6) for v in np.asarray(pronostico)]
+    pronostico = [paso.pronostico for paso in resultado.pronosticos]
+    intervalos = [
+        {
+            "paso": paso.paso,
+            "pronostico": paso.pronostico,
+            "limite_inferior": paso.limite_inferior,
+            "limite_superior": paso.limite_superior,
+        }
+        for paso in resultado.pronosticos
+    ]
 
     return {
+        # Claves históricas preservadas.
         "modelo": f"AR({p})",
         "orden_p": p,
-        "n_observaciones": n,
+        "n_observaciones": resultado.n_observaciones,
         "coeficientes": coeficientes,
-        "aic": round(float(ajuste.aic), 6),
-        "bic": round(float(ajuste.bic), 6),
-        "mse_residuos": round(mse, 6),
-        "media_residuos": round(float(np.mean(residuos)), 6),
-        "varianza_residuos": round(float(np.var(residuos, ddof=1)), 6),
-        "ljung_box": {
-            "lags": lb_lags,
-            "estadistico": round(lb_stat, 6),
-            "p_value": round(lb_pvalue, 6),
-            "es_ruido_blanco": es_ruido_blanco,
-            "interpretacion": (
-                "Los residuos se comportan como ruido blanco (modelo valido)."
-                if es_ruido_blanco
-                else "Los residuos NO son ruido blanco: el modelo no captura toda la estructura."
-            ),
+        "aic": resultado.aic,
+        "bic": resultado.bic,
+        "mse_residuos": diagnostico["mse"],
+        "media_residuos": diagnostico["media"],
+        "varianza_residuos": diagnostico["varianza"],
+        "ljung_box": diagnostico["ljung_box"],
+        "pasos_pronostico": len(pronostico),
+        "pronostico": pronostico,
+        # Campos comunes aditivos.
+        "orden": {"p": p, "d": 0, "q": 0},
+        "representacion_interna": f"ARIMA({p},0,0)",
+        "detalle_coeficientes": [
+            serializar_parametro(parametro)
+            for parametro in resultado.parametros
+        ],
+        "mse_residuos_entrenamiento": diagnostico["mse"],
+        "diagnostico_residuos": diagnostico,
+        "intervalos_pronostico": intervalos,
+        "nivel_confianza": resultado.nivel_confianza,
+        "tendencia_statsmodels": resultado.trend,
+        "descripcion_tendencia": resultado.descripcion_tendencia,
+        "informacion_ajuste": {
+            "convergio": resultado.convergio,
+            "metodo": "maxima verosimilitud",
+            "n_observaciones_efectivas": resultado.n_observaciones_efectivas,
+            "log_likelihood": resultado.log_likelihood,
+            "enforce_stationarity": resultado.enforce_stationarity,
+            "enforce_invertibility": resultado.enforce_invertibility,
         },
-        "pasos_pronostico": pasos_pronostico,
-        "pronostico": pronostico_lista,
+        "advertencias": list(resultado.advertencias) + list(diagnostico["advertencias"]),
     }
 
 
