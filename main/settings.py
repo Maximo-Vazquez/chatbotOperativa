@@ -7,8 +7,13 @@ from apps.chatbot.prompts import CHATBOT_7A_SYSTEM_PROMPT
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-change-me")
 DEBUG = os.environ.get("DJANGO_DEBUG", "true").strip().lower() in {"1", "true", "yes", "on"}
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "django-insecure-dev-only-change-me"
+    else:
+        raise RuntimeError("DJANGO_SECRET_KEY must be configured when DJANGO_DEBUG=false")
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -16,7 +21,14 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
-CSRF_TRUSTED_ORIGINS = ["https://ia.indutienda.com"]
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        "DJANGO_CSRF_TRUSTED_ORIGINS",
+        "http://localhost:8000,http://127.0.0.1:8000",
+    ).split(",")
+    if origin.strip()
+]
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
@@ -92,7 +104,7 @@ else:
             "ENGINE": DB_ENGINE,
             "NAME": os.environ.get("DB_NAME", "chatbot"),
             "USER": os.environ.get("DB_USER", "postgres"),
-            "PASSWORD": os.environ.get("DB_PASSWORD", "max135"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", ""),
             "HOST": os.environ.get("DB_HOST", "localhost"),
             "PORT": os.environ.get("DB_PORT", "5432"),
         }
@@ -165,4 +177,4 @@ CHATBOT_SYSTEM_PROMPT = os.environ.get("CHATBOT_SYSTEM_PROMPT", CHATBOT_7A_SYSTE
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "").strip()
 CLAVE_API_DEEPSEEK_INVITADO = os.environ.get("CLAVE_API_DEEPSEEK_INVITADO", "").strip()
 DEEPSEEK_MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-flash").strip() or "deepseek-v4-flash"
-DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
+DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1").strip()

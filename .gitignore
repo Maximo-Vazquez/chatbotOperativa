@@ -3,13 +3,19 @@
 /media/
 /pruebas/
 /Documentacion/
+/staticfiles/
 
 *.sqlite3
+db.sqlite3
 **/__pycache__/
 *.pyc
 .env
 .env.*
+!.env.example
+k8s/id_*
+k8s/*.key
+k8s/*.pub
+k8s/configuracion-nas.txt
+serve_django.py
 .claude
 .vscode
-# Added by code-review-graph
-.code-review-graph/

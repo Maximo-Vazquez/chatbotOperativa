@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 
 from django.conf import settings
@@ -19,6 +20,7 @@ from apps.herramientas.tools import TOOL_DEFINITIONS, ejecutar_herramienta
 from apps.herramientas.models import ToolCall
 
 SESION_INVITADO = "es_invitado"
+logger = logging.getLogger(__name__)
 
 PROVIDERS = {
     "deepseek": {
@@ -395,7 +397,8 @@ def chat_api(request):
                 },
                 status=413,
             )
-        return JsonResponse({"error": f"Error al consultar {provider['label']}: {exc}"}, status=502)
+        logger.exception("Error al consultar proveedor de chat %s", provider_key)
+        return JsonResponse({"error": f"No se pudo consultar {provider['label']}. Intentá nuevamente."}, status=502)
 
     if not assistant_message:
         assistant_message = "No pude generar respuesta. Intentá nuevamente."
