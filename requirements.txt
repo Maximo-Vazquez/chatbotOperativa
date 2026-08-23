@@ -66,7 +66,7 @@ statsmodels==0.14.4
 tinycss2==1.4.0
 tinyhtml5==2.0.0
 tqdm==4.66.6
-typing_extensions==4.12.2
+typing_extensions==4.15.0
 tzdata==2024.2
 urllib3==2.2.3
 boto3
