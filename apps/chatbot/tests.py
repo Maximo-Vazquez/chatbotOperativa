@@ -1,9 +1,12 @@
+import re
+
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from unittest.mock import patch
 
 from .constants import MODEL_DEEPSEEK_FLASH, MODEL_DEEPSEEK_PRO
+from .prompts import CHATBOT_7A_SYSTEM_PROMPT
 from .views import _clean_history, _completion_kwargs
 
 
@@ -52,6 +55,94 @@ class ChatbotViewsTests(TestCase):
         # El rechazo del portapapeles debe manejarse explícitamente, no fallar en silencio.
         self.assertContains(response, "navigator.clipboard.writeText(jsonText).then(() => {")
         self.assertContains(response, "}).catch(() => {")
+
+    def test_tool_dropdown_menu_base_rule_is_scrollable(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("chat_home"))
+
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode("utf-8")
+
+        # Regla base .tool-dropdown-menu, definida antes de cualquier @media,
+        # también debe limitar su alto y habilitar scroll: el recorte ocurre
+        # también en escritorio, no solo en el breakpoint móvil.
+        style_block_match = re.search(r"<style>(.*?)</style>", html, re.DOTALL)
+        self.assertIsNotNone(style_block_match, "No se encontró el bloque <style> en home.html")
+        style_css = style_block_match.group(1)
+
+        media_query_match = re.search(r"@media\s*\(max-width:\s*700px\)", style_css)
+        self.assertIsNotNone(media_query_match, "No se encontró @media (max-width: 700px)")
+        base_css = style_css[: media_query_match.start()]
+
+        base_menu_rule_match = re.search(
+            r"\.tool-dropdown-menu\s*\{([^}]*)\}", base_css
+        )
+        self.assertIsNotNone(
+            base_menu_rule_match,
+            "Falta la regla base .tool-dropdown-menu (fuera del @media)",
+        )
+        base_menu_rule = base_menu_rule_match.group(1)
+
+        self.assertRegex(
+            base_menu_rule,
+            r"max-height\s*:\s*[\d.]+dvh",
+            "La regla base .tool-dropdown-menu debe fijar max-height en dvh",
+        )
+        self.assertRegex(
+            base_menu_rule,
+            r"overflow-y\s*:\s*auto",
+            "La regla base .tool-dropdown-menu debe habilitar overflow-y: auto",
+        )
+
+    def test_tool_dropdown_menu_is_scrollable_on_mobile_viewport(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("chat_home"))
+
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode("utf-8")
+
+        # Bloque responsive para móviles (<=700px).
+        mobile_block_match = re.search(
+            r"@media\s*\(max-width:\s*700px\)\s*\{(.*?)\n\s*\}\s*\n\s*</style>",
+            html,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(
+            mobile_block_match,
+            "No se encontró el bloque @media (max-width: 700px) en home.html",
+        )
+        mobile_css = mobile_block_match.group(1)
+
+        # Dentro del bloque móvil debe existir una regla .tool-dropdown-menu
+        # que limite su alto con dvh y habilite scroll vertical táctil,
+        # para que el menú no quede truncado al superar el viewport.
+        menu_rule_match = re.search(
+            r"\.tool-dropdown-menu\s*\{([^}]*)\}", mobile_css
+        )
+        self.assertIsNotNone(
+            menu_rule_match,
+            "Falta una regla .tool-dropdown-menu dentro de @media (max-width: 700px)",
+        )
+        menu_rule = menu_rule_match.group(1)
+
+        self.assertRegex(
+            menu_rule,
+            r"max-height\s*:\s*[\d.]+dvh",
+            "La regla móvil de .tool-dropdown-menu debe fijar max-height en dvh",
+        )
+        self.assertRegex(
+            menu_rule,
+            r"overflow-y\s*:\s*auto",
+            "La regla móvil de .tool-dropdown-menu debe habilitar overflow-y: auto",
+        )
+        self.assertTrue(
+            re.search(r"-webkit-overflow-scrolling\s*:\s*touch", menu_rule)
+            or re.search(r"overscroll-behavior\s*:\s*contain", menu_rule),
+            "La regla móvil de .tool-dropdown-menu debe soportar scroll táctil "
+            "(-webkit-overflow-scrolling: touch u overscroll-behavior: contain)",
+        )
 
     def test_clean_history_keeps_full_valid_history(self):
         raw_history = [
@@ -424,3 +515,27 @@ class ChatbotViewsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()["history_cleared"])
         self.assertEqual(self.client.session["chat_history"], [{"user": "u", "assistant": "a"}])
+
+
+class ChatbotSystemPromptScopeTests(TestCase):
+    def test_prompt_declares_ma_sarima_arimax_sarimax_in_scope_and_drops_old_sarima_exclusion(self):
+        prompt_lower = CHATBOT_7A_SYSTEM_PROMPT.lower()
+
+        for model_name in ("ma", "sarima", "arimax", "sarimax"):
+            self.assertIn(
+                model_name,
+                prompt_lower,
+                f"El prompt debe declarar '{model_name}' explícitamente como modelo dentro de alcance.",
+            )
+
+        self.assertIn(
+            "no debes declarar fuera de alcance",
+            prompt_lower,
+            "El prompt debe explicar que no se deben declarar fuera de alcance modelos disponibles.",
+        )
+
+        self.assertNotRegex(
+            CHATBOT_7A_SYSTEM_PROMPT,
+            r"GARCH, VAR, SARIMA",
+            "El prompt no debe conservar la exclusión explícita antigua de SARIMA.",
+        )

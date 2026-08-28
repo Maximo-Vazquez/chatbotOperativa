@@ -720,6 +720,7 @@
       box-shadow: 0 12px 36px rgba(0,0,0,.25);
       opacity: 0; visibility: hidden; transform: translateY(6px);
       transition: opacity .15s, visibility .15s, transform .15s;
+      max-height: 60dvh; overflow-y: auto;
     }
     .tool-dropdown-menu.open { opacity: 1; visibility: visible; transform: translateY(0); }
     .tool-dropdown-item {
@@ -1023,6 +1024,12 @@
       }
       .qa-card { padding: 9px 10px; border-radius: 10px; font-size: .74rem; }
       .qa-card-icon { font-size: 1.1rem; margin-bottom: 4px; }
+
+      .tool-dropdown-menu {
+        max-height: 60dvh; overflow-y: auto;
+        overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+      }
     }
   </style>
 </head>
