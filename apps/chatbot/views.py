@@ -3,7 +3,7 @@ import logging
 import re
 
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
@@ -206,6 +206,219 @@ def _completion_kwargs(model, messages, params, include_tools=False):
         call_kwargs["tool_choice"] = "auto"
 
     return call_kwargs
+
+
+def _sse_event(event, data):
+    """Serializa un evento SSE con datos JSON en una sola línea."""
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _append_stream_tool_call(tool_calls, tool_call_chunk):
+    """Reconstruye una tool call emitida fragmentada por el proveedor."""
+    index = getattr(tool_call_chunk, "index", 0)
+    tool_call = tool_calls.setdefault(index, {
+        "id": "",
+        "type": "function",
+        "function": {"name": "", "arguments": ""},
+    })
+    tool_call["id"] = getattr(tool_call_chunk, "id", None) or tool_call["id"]
+    function = getattr(tool_call_chunk, "function", None)
+    if function is not None:
+        tool_call["function"]["name"] += getattr(function, "name", None) or ""
+        tool_call["function"]["arguments"] += getattr(function, "arguments", None) or ""
+
+
+@requiere_acceso_chat
+@require_POST
+def chat_stream(request):
+    """Transmite la respuesta final mediante SSE y persiste solo al completarla."""
+    provider_key, provider, model, api_key = _get_chat_config(request)
+    if not api_key:
+        return JsonResponse(
+            {"error": f"Falta la API key para {provider['label']}. Configurala en el panel."},
+            status=500,
+        )
+
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "JSON inválido."}, status=400)
+
+    user_message = (payload.get("message") or "").strip()
+    if not user_message:
+        return JsonResponse({"error": "El mensaje no puede estar vacío."}, status=400)
+
+    suggested_tool = (payload.get("suggested_tool") or "").strip()
+    history = _clean_history(request.session.get("chat_history", []))
+    system_prompt = settings.CHATBOT_SYSTEM_PROMPT + (
+        "\n\nIMPORTANTE: cuando necesites usar una herramienta, usá EXCLUSIVAMENTE "
+        "el mecanismo nativo de function calling (tool_calls). Nunca escribas bloques "
+        "<DSML>, <invoke>, <parameter> ni etiquetas similares en el contenido del mensaje. "
+        "Si no vas a usar una herramienta, respondé directamente en español."
+    )
+    messages = [{"role": "system", "content": system_prompt}]
+    for item in history:
+        messages.append({"role": "user", "content": item["user"]})
+        messages.append({"role": "assistant", "content": item["assistant"]})
+
+    final_user_message = user_message
+    if suggested_tool:
+        final_user_message += (
+            f"\n\n[Sugerencia del usuario: por favor usá la herramienta '{suggested_tool}' "
+            "para responder.]"
+        )
+    messages.append({"role": "user", "content": final_user_message})
+
+    def generate():
+        try:
+            client_kwargs = {"api_key": api_key}
+            if provider["base_url"]:
+                client_kwargs["base_url"] = provider["base_url"]
+            client = OpenAI(**client_kwargs)
+            params = get_model_params(model)
+            supports_tools = _model_supports_tools(provider_key, model)
+            tool_results_all = []
+            final_parts = []
+            last_chunk = None
+            max_tool_iters = 9
+
+            for iteration in range(max_tool_iters + 1):
+                allow_tools = supports_tools and iteration < max_tool_iters
+                if iteration:
+                    yield _sse_event("status", {"message": "Analizando los resultados…"})
+                elif params["thinking"]:
+                    yield _sse_event("status", {"message": "Pensando…"})
+                else:
+                    yield _sse_event("status", {"message": "Preparando respuesta…"})
+                stream = client.chat.completions.create(
+                    **_completion_kwargs(model, messages, params, include_tools=allow_tools),
+                    stream=True,
+                )
+                streamed_tool_calls = {}
+                tool_call_status_sent = False
+                iteration_parts = []
+                stream_finish_reason = None
+
+                for chunk in stream:
+                    last_chunk = chunk
+                    for choice in getattr(chunk, "choices", []) or []:
+                        finish_reason = getattr(choice, "finish_reason", None)
+                        if finish_reason:
+                            stream_finish_reason = finish_reason
+                        delta = getattr(choice, "delta", None)
+                        if delta is None:
+                            continue
+                        tool_call_chunks = getattr(delta, "tool_calls", None) or []
+                        if tool_call_chunks and not tool_call_status_sent:
+                            yield _sse_event("status", {"message": "Preparando análisis…"})
+                            tool_call_status_sent = True
+                        for tool_call_chunk in tool_call_chunks:
+                            _append_stream_tool_call(streamed_tool_calls, tool_call_chunk)
+                        content = getattr(delta, "content", None)
+                        if content:
+                            iteration_parts.append(content)
+                            yield _sse_event("delta", {"text": content})
+
+                if not streamed_tool_calls:
+                    final_parts = iteration_parts
+                    break
+
+                if stream_finish_reason != "tool_calls":
+                    yield _sse_event("error", {
+                        "error": (
+                            "La llamada a herramienta quedó incompleta porque la respuesta "
+                            "del modelo se truncó. Intentá nuevamente."
+                        ),
+                    })
+                    return
+
+                parsed_tool_calls = []
+                for index in sorted(streamed_tool_calls):
+                    tool_call = streamed_tool_calls[index]
+                    function = tool_call["function"]
+                    try:
+                        fn_args = json.loads(function["arguments"] or "{}")
+                    except json.JSONDecodeError:
+                        fn_args = None
+                    if not isinstance(fn_args, dict):
+                        yield _sse_event("error", {
+                            "error": (
+                                f"La herramienta {function['name']} recibió argumentos "
+                                "inválidos. Intentá nuevamente."
+                            ),
+                        })
+                        return
+                    parsed_tool_calls.append((tool_call, fn_args))
+
+                messages.append({
+                    "role": "assistant",
+                    "content": "".join(iteration_parts) or None,
+                    "tool_calls": [streamed_tool_calls[index] for index in sorted(streamed_tool_calls)],
+                })
+                for tool_call, fn_args in parsed_tool_calls:
+                    function = tool_call["function"]
+                    fn_name = function["name"]
+                    yield _sse_event("status", {"message": f"Ejecutando {fn_name}…"})
+                    yield _sse_event("tool", {"tool_name": fn_name})
+                    result = ejecutar_herramienta(fn_name, fn_args)
+                    if request.user.is_authenticated:
+                        ToolCall.objects.create(
+                            user=request.user,
+                            tool_name=fn_name,
+                            input_data=fn_args,
+                            output_data=result,
+                        )
+                    tool_results_all.append({
+                        "tool_name": fn_name,
+                        "input": fn_args,
+                        "output": result,
+                    })
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call["id"],
+                        "content": json.dumps(result, ensure_ascii=False),
+                    })
+            else:
+                raise RuntimeError("Se alcanzó el máximo de llamadas a herramientas.")
+
+            assistant_message = _strip_dsml_blocks("".join(final_parts).strip())
+            if not assistant_message:
+                assistant_message = "No pude generar respuesta. Intentá nuevamente."
+
+            history_item = {"user": user_message, "assistant": assistant_message}
+            if tool_results_all:
+                history_item["tool_results"] = tool_results_all
+            history.append(history_item)
+            request.session["chat_history"] = history
+            usage = _build_usage_payload(last_chunk, model)
+            request.session["chat_last_usage"] = usage
+            request.session.save()
+            yield _sse_event("done", {"usage": usage, "tool_results": tool_results_all})
+        except Exception as exc:
+            if _is_context_length_error(exc):
+                context_window = get_context_window(model)
+                yield _sse_event("error", {
+                    "error": (
+                        "El chat es demasiado largo y superó el contexto del modelo. "
+                        "Iniciá un nuevo chat para continuar."
+                    ),
+                    "context_overflow": True,
+                    "usage": {
+                        "context_window": context_window,
+                        "prompt_tokens": context_window,
+                        "context_used_percent": 100,
+                        "context_remaining_percent": 0,
+                        "context_remaining_tokens": 0,
+                    },
+                })
+                return
+            logger.exception("Error al transmitir respuesta del proveedor de chat %s", provider_key)
+            yield _sse_event("error", {"error": f"No se pudo consultar {provider['label']}. Intentá nuevamente."})
+
+    response = StreamingHttpResponse(generate(), content_type="text/event-stream; charset=utf-8")
+    response["Cache-Control"] = "no-cache"
+    response["X-Accel-Buffering"] = "no"
+    return response
 
 
 @requiere_acceso_chat

@@ -1561,7 +1561,13 @@
     });
   }
 
-  function renderMD(text) {
+  function renderMarkdownPreview(text) {
+    // Durante el stream evitamos crear controles de copia transitorios para bloques
+    // de código: se agregan una sola vez en el render final.
+    return renderMD(text, false);
+  }
+
+  function renderMD(text, enhanceCode = true) {
     try {
       if (!window.DOMPurify) {
         return '<pre style="white-space:pre-wrap">' + esc(text) + '</pre>';
@@ -1582,7 +1588,7 @@
         USE_PROFILES: { html: true },
         ADD_ATTR: ['class']
       });
-      const html = enhanceCodeBlocks(sanitized);
+      const html = enhanceCode ? enhanceCodeBlocks(sanitized) : sanitized;
       return restoreLatex(html, formulas);
     } catch(e) {
       console.error('renderMD error:', e);
@@ -2393,7 +2399,6 @@
     }
 
     const jsonAll = JSON.stringify(out, null, 2);
-    const jsonEsc = esc(jsonAll);
     const showChartBtn = chartsFn ? `
       <button class="tc-expand-btn" onclick="tcToggleChart(this)" data-open="0">
         <i class='bx bx-line-chart'></i> Ver gráficos
@@ -2410,12 +2415,17 @@
         <div class="tool-card-body">${body}</div>
         <div class="tool-card-footer">
           ${showChartBtn}
-          <button class="tc-copy-all-btn" title="Copiar resultados como JSON" onclick="tcCopyAll(this,'${jsonEsc.replace(/'/g,"\\'")}')">
+          <button class="tc-copy-all-btn" title="Copiar resultados como JSON">
             <i class='bx bx-copy'></i> Copiar todo
           </button>
         </div>
         <div class="tool-card-chart-wrap"></div>
       </div>`;
+
+    const copyAllBtn = el.querySelector('.tc-copy-all-btn');
+    if (copyAllBtn) {
+      copyAllBtn.addEventListener('click', () => tcCopyAll(copyAllBtn, jsonAll));
+    }
 
     el._chartsFn = chartsFn;
     return el;
@@ -2491,13 +2501,13 @@
     const aiEl = addAI('', false);
     aiEl.innerHTML = '';
 
-    if (Array.isArray(toolResults) && toolResults.length > 0) {
-      aiEl.appendChild(buildToolGroupEl(toolResults));
-    }
-
     const textDiv = document.createElement('div');
     textDiv.innerHTML = renderMD(assistantText || 'Sin respuesta.');
     aiEl.appendChild(textDiv);
+
+    if (Array.isArray(toolResults) && toolResults.length > 0) {
+      aiEl.appendChild(buildToolGroupEl(toolResults));
+    }
     return aiEl;
   }
 
@@ -2522,15 +2532,16 @@
   }
 
   // ── Copiar todo el JSON ──
-  function tcCopyAll(btn, jsonEscaped) {
-    // Revertir escape de entidades HTML básicas
-    const raw = jsonEscaped
-      .replace(/&amp;/g,'&').replace(/&lt;/g,'<')
-      .replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
-    navigator.clipboard.writeText(raw).then(() => {
+  function tcCopyAll(btn, jsonText) {
+    navigator.clipboard.writeText(jsonText).then(() => {
       const orig = btn.innerHTML;
       btn.innerHTML = `<i class='bx bx-check'></i> Copiado`;
       btn.style.color = 'var(--accent-green)';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+    }).catch(() => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = `<i class='bx bx-x'></i> Error al copiar`;
+      btn.style.color = '#f87171';
       setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
     });
   }
@@ -2824,6 +2835,128 @@
     chatInput.classList.toggle('processing', on);
   }
 
+  async function consumeChatStream(response, aiEl, usedTool) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    const textDiv = document.createElement('div');
+    let buffer = '';
+    let assistantText = '';
+    let completed = null;
+    let streamError = null;
+    let started = false;
+    let markdownRenderTimeout = null;
+    let markdownRenderFrame = null;
+    let lastMarkdownRenderAt = 0;
+    const MARKDOWN_RENDER_INTERVAL_MS = 100;
+    const statusEl = document.createElement('div');
+    statusEl.className = 'typing-state';
+    const statusLabelEl = document.createElement('span');
+    const statusDotsEl = document.createElement('div');
+    statusDotsEl.className = 'typing-dots';
+    for (let index = 0; index < 3; index += 1) statusDotsEl.appendChild(document.createElement('span'));
+    statusEl.append(statusLabelEl, statusDotsEl);
+
+    function startText() {
+      if (started) return;
+      started = true;
+      statusEl.remove();
+      aiEl.innerHTML = '';
+      aiEl.appendChild(textDiv);
+    }
+
+    function showStreamingStatus(message) {
+      statusLabelEl.textContent = message;
+      if (!statusEl.isConnected) {
+        // Sin herramienta activa reemplazamos el placeholder inicial; con ella
+        // conservamos su tarjeta de carga y mostramos el estado debajo.
+        if (!started && !usedTool) aiEl.innerHTML = '';
+        aiEl.appendChild(statusEl);
+      }
+      scrollEnd();
+    }
+
+    function renderMarkdownPreviewNow() {
+      markdownRenderFrame = null;
+      lastMarkdownRenderAt = performance.now();
+      textDiv.innerHTML = renderMarkdownPreview(assistantText);
+      scrollEnd();
+    }
+
+    function scheduleMarkdownRender() {
+      if (markdownRenderTimeout !== null || markdownRenderFrame !== null) return;
+      const elapsed = performance.now() - lastMarkdownRenderAt;
+      const delay = Math.max(0, MARKDOWN_RENDER_INTERVAL_MS - elapsed);
+      markdownRenderTimeout = window.setTimeout(() => {
+        markdownRenderTimeout = null;
+        markdownRenderFrame = window.requestAnimationFrame(renderMarkdownPreviewNow);
+      }, delay);
+    }
+
+    function cancelScheduledMarkdownRender() {
+      if (markdownRenderTimeout !== null) window.clearTimeout(markdownRenderTimeout);
+      if (markdownRenderFrame !== null) window.cancelAnimationFrame(markdownRenderFrame);
+      markdownRenderTimeout = null;
+      markdownRenderFrame = null;
+    }
+
+    function handleEvent(block) {
+      const event = (block.match(/^event: *(.*)$/m) || [])[1];
+      const rawData = (block.match(/^data: *(.*)$/m) || [])[1];
+      if (!event || !rawData) return;
+      let data;
+      try { data = JSON.parse(rawData); } catch { return; }
+
+      if (event === 'delta') {
+        statusEl.remove();
+        startText();
+        assistantText += data.text || '';
+        scheduleMarkdownRender();
+      } else if (event === 'status') {
+        showStreamingStatus(data.message || 'Procesando…');
+      } else if (event === 'tool') {
+        // Fallback para consumidores que todavía no emitan el evento status.
+        showStreamingStatus(`Ejecutando ${data.tool_name || 'herramienta'}…`);
+      } else if (event === 'done') {
+        completed = data;
+      } else if (event === 'error') {
+        streamError = data;
+      }
+    }
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let separator;
+      while ((separator = buffer.indexOf('\n\n')) !== -1) {
+        const block = buffer.slice(0, separator);
+        buffer = buffer.slice(separator + 2);
+        handleEvent(block);
+      }
+    }
+
+    if (streamError) {
+      statusEl.remove();
+      if (streamError.context_overflow) {
+        if (streamError.usage) updateCtxGauge(streamError.usage);
+        aiEl.innerHTML = `<span style="color:#f59e0b"><strong>Contexto lleno.</strong><br>${esc(streamError.error)}</span>`;
+        return { usage: streamError.usage };
+      }
+      throw new Error(streamError.error || 'No se pudo generar la respuesta.');
+    }
+    statusEl.remove();
+    if (!completed) throw new Error('La transmisión finalizó sin confirmación del servidor.');
+    startText();
+    cancelScheduledMarkdownRender();
+    const toolCards = Array.isArray(completed.tool_results) ? completed.tool_results : [];
+    if (toolCards.length > 0) {
+      const groupEl = buildToolGroupEl(toolCards);
+      textDiv.after(groupEl);
+    }
+    textDiv.innerHTML = renderMD(assistantText || 'Sin respuesta.');
+    return completed;
+  }
+
   sendBtn.addEventListener('click', async () => {
     // Click durante generación → abortar (estilo ChatGPT).
     if (isProcessing) {
@@ -2862,47 +2995,27 @@
       const body = { message: text };
       if (usedTool) body.suggested_tool = usedTool;
 
-      const res = await fetch("{% url 'chat_api' %}", {
+      const res = await fetch("{% url 'chat_stream' %}", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
         body: JSON.stringify(body),
         signal: controller.signal,
       });
-      let data;
-      try { data = await res.json(); } catch { data = {}; }
 
       if (controller.signal.aborted) return;
 
-      if (data && data.context_overflow) {
-        if (data.usage) updateCtxGauge(data.usage);
-        myAiEl.innerHTML = `<span style="color:#f59e0b"><strong>Contexto lleno.</strong><br>${esc(data.error || 'El chat es demasiado largo. Iniciá un nuevo chat para continuar.')}</span>`;
-      } else if (!res.ok) {
+      if (!res.ok) {
+        let data;
+        try { data = await res.json(); } catch { data = {}; }
+        if (data && data.context_overflow) {
+          if (data.usage) updateCtxGauge(data.usage);
+          myAiEl.innerHTML = `<span style="color:#f59e0b"><strong>Contexto lleno.</strong><br>${esc(data.error || 'El chat es demasiado largo. Iniciá un nuevo chat para continuar.')}</span>`;
+          return;
+        }
         const detail = data.error || data.detail || JSON.stringify(data) || '(sin detalle)';
         myAiEl.innerHTML = `<span style="color:#f87171"><strong>Error HTTP ${res.status}${res.statusText ? ' ' + res.statusText : ''}</strong><br>${esc(detail)}</span>`;
-      } else if (data.error) {
-        myAiEl.innerHTML = `<span style="color:#f87171"><strong>Error del servidor:</strong><br>${esc(data.error)}</span>`;
       } else {
-        myAiEl.innerHTML = '';
-
-        const toolCards = Array.isArray(data.tool_results) && data.tool_results.length
-          ? data.tool_results
-          : (data.tool_result ? [data.tool_result] : []);
-        if (toolCards.length > 0) {
-          const groupEl = buildToolGroupEl(toolCards);
-          groupEl.style.opacity = '0';
-          groupEl.style.transform = 'translateY(8px)';
-          groupEl.style.transition = 'opacity .25s, transform .25s';
-          myAiEl.appendChild(groupEl);
-          requestAnimationFrame(() => {
-            groupEl.style.opacity = '1';
-            groupEl.style.transform = 'translateY(0)';
-          });
-        }
-
-        const textDiv = document.createElement('div');
-        textDiv.innerHTML = renderMD(data.response || 'Sin respuesta.');
-        myAiEl.appendChild(textDiv);
-
+        const data = await consumeChatStream(res, myAiEl, usedTool);
         if (data.usage) updateCtxGauge(data.usage);
       }
     } catch (err) {
