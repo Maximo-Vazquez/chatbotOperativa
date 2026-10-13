@@ -361,7 +361,7 @@ class ResultadoSerializableTests(SimpleTestCase):
 class ArimaRegresionSinteticaTests(SimpleTestCase):
     """Prueba de regresion de comportamiento con una serie sintetica de 24
     observaciones (no se encontro en el repositorio una serie fija del caso
-    academico del chatbot 7A: no hay fixtures ni datos de ejemplo versionados
+    academico del asistente: no hay fixtures ni datos de ejemplo versionados
     en `apps/herramientas/` ni en `docs/chatbot/`). Cubre los mismos chequeos
     que pediria esa prueba: ajuste ARIMA(0,1,0) con drift, tres pronosticos
     finitos, intervalos finitos y diagnostico residual ejecutado.

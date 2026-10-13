@@ -1,4 +1,4 @@
-# Chatbot Operativa
+# Asistente de Series Temporales
 
 Aplicación Django que integra un chatbot con herramientas de investigación
 operativa y pronóstico de series temporales. Las herramientas se publican al
